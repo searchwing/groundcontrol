@@ -26,10 +26,10 @@ class _UAV(threading.Thread):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.daemon = True
 
-        self.uav = None
         self.last_heartbeat = 0
-
+        self.uav = None
         self.states = {}
+
 
     def run(self):
         while 1:
@@ -38,6 +38,7 @@ class _UAV(threading.Thread):
                     print 'Connection lost UAV %s' % UAV_ADDRESS
                     self.uav.close()
                     self.uav = None
+                    self.states = {}
 
             if not self.uav:
                 try:
@@ -81,7 +82,15 @@ class _UAV(threading.Thread):
         self.states[name] = value
 
 
+
+
 _uav = _UAV()
+
+
+def get():
+    """Get connected UAV or None.
+    """
+    return _uav.uav
 
 
 def start():
@@ -90,8 +99,8 @@ def start():
     _uav.start()
 
 
-def get_uav():
-    """Get connected UAV or None.
+def get_states():
+    """Get current UAV states.
     """
-    return _uav.uav
+    return _uav.states
 

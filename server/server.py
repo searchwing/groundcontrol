@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 from flask import render_template
 
-# lazy uav resolver
-from . import get_uav
-
-# init and start flask
+from . import get_uav, get_uav_states
+from . import get_gps_position
 from . import app
 
 

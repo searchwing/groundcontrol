@@ -3,12 +3,14 @@
 Start flask server.
 @author sascha@searchwing.org
 """
-import socket
+import flask as _flask
 
-import flask
+from . uav import start as _uav_start
+from . gps import start as _gps_start
 
-from . import uav as _uav
-from . import gps as _gps
+from . uav import get          as get_uav
+from . uav import get_states   as get_uav_states
+from . gps import get_position as get_gps_position
 
 
 
@@ -16,6 +18,7 @@ from . import gps as _gps
 # Allow us to reuse sockets after the are bound.
 # http://stackoverflow.com/questions/25535975/release-python-flask-port-when-script-is-terminated
 def _fix_socket():
+    import socket
     socket.socket._bind = socket.socket.bind
     def socket_bind(self, *args, **kwargs):
         self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -27,25 +30,11 @@ _fix_socket()
 
 
 # the http server framework
-app = flask.Flask('uav')
+app = _flask.Flask('uav')
 
+# connecting uav
+_uav_start()
 
-
-
-_uav.start()
-
-def get_uav():
-    """Get connected UAV or None.
-    """
-    return _uav.get_uav()
-
-
-
-
-_gps.start()
-
-def get_position():
-    """Get latest known position or None.
-    """
-    return _gps.get_position()
+# connecting gps
+_gps_start()
 
