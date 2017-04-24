@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """General initializations.
 Start flask server.
-@author sascha@searchwing.org
 """
 import flask as _flask
 

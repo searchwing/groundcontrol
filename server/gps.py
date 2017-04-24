@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """(Re)connect local GPS in threaded loop
 Parse NMEA, provide current local position
-@author sascha@searchwing.org
 """
 import time, serial, threading
 from . settings import *

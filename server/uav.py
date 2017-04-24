@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """(Re)connect UAV in threaded loop
-@author sascha@searchwing.org
 """
 import socket, time, threading, exceptions
 import dronekit
