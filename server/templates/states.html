@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="/static/jquery/jquery.js"></script>
+{% endblock %}
+{% block title %}States{% endblock %}
+{% block content %}
+
+<div id="states"></div>
+
+<script>
+$(function(){
+    function show(data){
+        var table = $("<table>");
+        var tbody = $("<tbody>");
+        table.append(tbody);
+        var keys = [];
+        $.each(data, function(key, val){keys.push(key);});
+        keys.sort();
+        $.each(keys, function(idx, key){
+            var tr = $("<tr>");
+            table.append(tr);
+            $("<td>").html(key).appendTo(tr); 
+            $("<td>").html(data[key]).appendTo(tr); 
+        });
+        $("#states").html(table);
+    }
+    function update(){
+        $.getJSON("/api/uav/states", show);
+    }
+    update();
+    setInterval(update, 1000);
+});
+</script>
+{% endblock %}
