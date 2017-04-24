@@ -3,23 +3,15 @@
 @author sascha@searchwing.org
 """
 import socket, time, threading, exceptions
-
 import dronekit
+from settings import *
 
 
 
 
-UAV_ADDRESS                 = 'tcp:127.0.0.1:5760'
-UAV_HEARTBEAT_TIMEOUT       = 20 # seconds
-UAV_CONNECTION_TIMEOUT      =  5 # seconds
-UAV_CONNECTION_TEST_TIMEOUT =  5 # seconds
-
-
-
-
-# (Re)connect uav in threaded loop
 class _UAV(threading.Thread):
-    """Internal only.
+    """(Re)connect UAV in threaded loop
+    Internal only.
     """
 
     def __init__(self, *args, **kwargs):
@@ -33,38 +25,40 @@ class _UAV(threading.Thread):
 
     def run(self):
         while 1:
-            if time.time() - self.last_heartbeat > UAV_CONNECTION_TIMEOUT:
-                if self.uav:
-                    print 'Connection lost UAV %s' % UAV_ADDRESS
-                    self.uav.close()
-                    self.uav = None
-                    self.states = {}
+            if self.uav and UAV_CONNECTION_TIMEOUT and \
+                    time.time() - self.last_heartbeat > UAV_CONNECTION_TIMEOUT:
+                print 'UAV Connection lost'
+                self.uav.close()
+                self.uav = None
+                self.states = {}
 
             if not self.uav:
+                print 'Connecting UAV %s' % UAV_ADDRESS
                 try:
-                    print 'Connecting UAV %s' % UAV_ADDRESS
                     self.uav = dronekit.connect(
                             UAV_ADDRESS,
-                            wait_ready = True,
+                            baud              = UAV_BAUD,
+                            rate              = UAV_REFRESH_RATE,
+                            wait_ready        = True,
                             heartbeat_timeout = UAV_HEARTBEAT_TIMEOUT)
 
                 except socket.error:
-                    print 'error: no server'
+                    print 'Connecting UAV error: no server'
 
                 except exceptions.OSError:
-                    print 'error: no serial'
+                    print 'Connecting UAV error: no serial'
 
                 except dronekit.APIException:
-                    print 'error: timeout'
+                    print 'Connecting UAV error: timeout'
 
                 except Exception, e:
                     print 'error: unkown', e
 
                 if not self.uav:
-                    print 'Connecting failed UAV %s' % UAV_ADDRESS
+                    print 'Connecting UAV failed'
 
                 else:
-                    print 'Connected UAV %s' % UAV_ADDRESS
+                    print 'Connecting UAV ok'
                     self.last_heartbeat = time.time()
                     self.uav.add_attribute_listener(
                             'last_heartbeat', self.on_heartbeat)
@@ -72,11 +66,15 @@ class _UAV(threading.Thread):
                     self.uav.add_attribute_listener(
                             '*', self.on_any)
 
+            if self.uav and not UAV_CONNECTION_TIMEOUT:
+                break
+
             time.sleep(UAV_CONNECTION_TEST_TIMEOUT)
 
 
     def on_heartbeat(self, *args, **kwargs):
         self.last_heartbeat = time.time()
+
 
     def on_any(self, uav, name, value):
         self.states[name] = value

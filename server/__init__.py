@@ -8,9 +8,9 @@ import flask as _flask
 from . uav import start as _uav_start
 from . gps import start as _gps_start
 
-from . uav import get          as get_uav
-from . uav import get_states   as get_uav_states
-from . gps import get_position as get_gps_position
+from . uav import get                as get_uav
+from . uav import get_states         as get_uav_states
+from . gps import get_local_position as get_local_gps_position
 
 
 

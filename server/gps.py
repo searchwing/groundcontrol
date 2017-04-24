@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-"""(Re)connect GPS in threaded loop
-Parse NMEA, provide current position
+"""(Re)connect local GPS in threaded loop
+Parse NMEA, provide current local position
 @author sascha@searchwing.org
 """
 import time, serial, threading
-
-
-PORT = '/dev/tty.SLAB_USBtoUART'
-BAUD = 4800
+from . settings import *
 
 
 
@@ -30,8 +27,8 @@ class _GPS(threading.Thread):
             try:
                 while 1:
                     self._run()
-            except serial.SerialException:
-                print 'GPS serial failed'
+            except serial.SerialException, e:
+                print 'GPS serial failed', e
                 self.ser = None
                 time.sleep(2)
 
@@ -41,9 +38,9 @@ class _GPS(threading.Thread):
             print 'Open GPS'
 
             self.ser = serial.Serial()
-            self.ser.port     = PORT
-            self.ser.baudrate = BAUD
-            self.ser.timeout  = 1
+            self.ser.port     = GPS_PORT
+            self.ser.baudrate = GPS_BAUD
+            self.ser.timeout  = 10
             self.ser.open()
 
             print 'GPS open'
@@ -94,7 +91,7 @@ def start():
     _gps.start()
 
 
-def get_position():
+def get_local_position():
     """Get latest known position or None.
     """
     return _gps.latitude, _gps.longitude
