@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+"""The http server component.
+"""
 from flask import render_template, jsonify
 
-from . import get_uav, get_uav_states
+from . import app, gps, uav
 from . import app
 
 
@@ -15,15 +17,19 @@ def index():
     return render_template('index.html', **ctx)
 
 
-@app.route('/uav/map')
-def map():
+
+
+@app.route('/map')
+def uav_map():
     """Map page.
     """
     ctx = {}
     return render_template('map.html', **ctx)
 
 
-@app.route('/uav/states')
+
+
+@app.route('/states')
 def uav_states():
     ctx = {}
     return render_template('states.html', **ctx)
@@ -31,37 +37,49 @@ def uav_states():
 
 
 
+
+
+
+
+@app.route('/api/local/gps')
+def local_gps():
+    ctx = gps.get_position()
+    return jsonify(ctx)
+
+
+
+
 @app.route('/api/uav/states')
 def api_uav_states():
-    uav = get_uav()
-    if not uav:
+    vehicle = uav.get()
+    if not vehicle:
         return jsonify({})
 
     return jsonify({
-        'version_major'             : uav.version.major,
-        'version_patch'             : uav.version.patch,
-        'version_release'           : uav.version.release,
-        'system_status'             : uav.system_status.state,
-        'is_armable'                : uav.is_armable,
-        'armed'                     : uav.armed,
-        'gps_fix'                   : uav.gps_0.fix_type,
-        'gps_sats'                  : uav.gps_0.satellites_visible,
-        'location_global_frame_alt' : uav.location.global_frame.alt,
-        'location_global_frame_lon' : uav.location.global_frame.lon,
-        'location_global_frame_lat' : uav.location.global_frame.lat,
-        'rangefinder_distance'      : uav.rangefinder.distance,
-        'rangefinder_voltage'       : uav.rangefinder.voltage,
-        'attitude_pitch'            : uav.attitude.pitch,
-        'attitude_roll'             : uav.attitude.roll,
-        'attitude_yaw'              : uav.attitude.yaw,
-        'velocity'                  : uav.velocity,
-        'airspeed'                  : uav.airspeed,
-        'groundspeed'               : uav.groundspeed,
-        'heading'                   : uav.heading,
-        'battery_voltage'           : uav.battery.voltage,
-        'battery_current'           : uav.battery.current,
-        'battery_level'             : uav.battery.current,
-        'last_heartbeat'            : uav.last_heartbeat,
+        'version_major'             : vehicle.version.major,
+        'version_patch'             : vehicle.version.patch,
+        'version_release'           : vehicle.version.release,
+        'system_status'             : vehicle.system_status.state,
+        'is_armable'                : vehicle.is_armable,
+        'armed'                     : vehicle.armed,
+        'gps_fix'                   : vehicle.gps_0.fix_type,
+        'gps_sats'                  : vehicle.gps_0.satellites_visible,
+        'location_global_frame_alt' : vehicle.location.global_frame.alt,
+        'location_global_frame_lon' : vehicle.location.global_frame.lon,
+        'location_global_frame_lat' : vehicle.location.global_frame.lat,
+        'rangefinder_distance'      : vehicle.rangefinder.distance,
+        'rangefinder_voltage'       : vehicle.rangefinder.voltage,
+        'attitude_pitch'            : vehicle.attitude.pitch,
+        'attitude_roll'             : vehicle.attitude.roll,
+        'attitude_yaw'              : vehicle.attitude.yaw,
+        'velocity'                  : vehicle.velocity,
+        'airspeed'                  : vehicle.airspeed,
+        'groundspeed'               : vehicle.groundspeed,
+        'heading'                   : vehicle.heading,
+        'battery_voltage'           : vehicle.battery.voltage,
+        'battery_current'           : vehicle.battery.current,
+        'battery_level'             : vehicle.battery.current,
+        'last_heartbeat'            : vehicle.last_heartbeat,
     })
 
 
@@ -69,20 +87,25 @@ def api_uav_states():
 
 @app.route('/api/uav/position')
 def api_uav_position():
-    uav = get_uav()
-    if not uav:
+    vehicle = uav.get()
+    if not vehicle:
         return jsonify({})
 
     return jsonify({
-        'fix'  : uav.gps_0.fix_type,
-        'sats' : uav.gps_0.satellites_visible,
-        'alt'  : uav.location.global_frame.alt,
-        'lon'  : uav.location.global_frame.lon,
-        'lat'  : uav.location.global_frame.lat,
+        'fix'  : vehicle.gps_0.fix_type,
+        'sats' : vehicle.gps_0.satellites_visible,
+        'alt'  : vehicle.location.global_frame.alt,
+        'lon'  : vehicle.location.global_frame.lon,
+        'lat'  : vehicle.location.global_frame.lat,
     })
+
+
+
+
 
 
 
 
 if __name__ == "__main__":
     app.run()
+

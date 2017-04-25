@@ -90,8 +90,12 @@ def start():
     _gps.start()
 
 
-def get_local_position():
+def get_position():
     """Get latest known position or None.
     """
-    return _gps.latitude, _gps.longitude
+    return {
+        'lat' : _gps.latitude,
+        'lon' : _gps.longitude,
+        'alt' : _gps.altitude,
+    }
 
