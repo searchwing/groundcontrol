@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """The http server component.
 """
+import time
+
+from dronekit import VehicleMode
 from flask import render_template, jsonify
 
 from . import app, gps, uav
@@ -39,10 +42,18 @@ def uav_states():
 
 
 
+"""READY, BUSY, FAIL, OK"""
+_api_uav_apiState = 'READY'
+
+@app.route('/api/uav/apistate')
+def api_uav_state():
+    return _api_uav_apiState
+
+
 
 
 @app.route('/api/local/gps')
-def local_gps():
+def api_local_gps():
     ctx = gps.get_position()
     return jsonify(ctx)
 
@@ -102,6 +113,18 @@ def api_uav_position():
 
 
 
+@app.route('/api/uav/loiter/<int:altitude>')
+def api_uav_loiter(altitude):
+    if not uav.is_ready():
+        return jsonify({'ok' : False,})
+
+    uav.prearm()
+    vehicle = uav.get()
+    vehicle.mode = VehicleMode('GUIDED')
+    uav.arm()
+    vehicle.simple_takeoff(altitude)
+
+    return jsonify({'ok' : True,})
 
 
 

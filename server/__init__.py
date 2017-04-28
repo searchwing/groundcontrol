@@ -24,10 +24,10 @@ _fix_socket()
 
 
 # connecting uav
-uav.start()
+uav.init()
 
 # connecting gps
-gps.start()
+#gps.start()
 
 # the http server framework
 app = _flask.Flask('uav')

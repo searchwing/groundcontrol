@@ -18,7 +18,7 @@
   Refresh rate
     dronekit default is 4 for 4Hz
 """
-UAV_ADDRESS                 = '/dev/tty.usbmodem1'
+UAV_ADDRESS                 = '/dev/tty.usbmodem1'#'/dev/tty.SLAB_USBtoUART'
 UAV_BAUD                    = 57600
 UAV_HEARTBEAT_TIMEOUT       = 30
 UAV_CONNECTION_TIMEOUT      = 0

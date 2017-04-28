@@ -81,18 +81,22 @@ class _GPS(threading.Thread):
             #print latitude, longitude
 
 
-_gps = _GPS()
+_gps = None
 
 
-def start():
+def init():
     """Start polling/connecting/parsing gps.
     """
+    global _gps
+    assert not _gps
+    _gps = _GPS()
     _gps.start()
 
 
 def get_position():
     """Get latest known position or None.
     """
+    assert gsp
     return {
         'lat' : _gps.latitude,
         'lon' : _gps.longitude,
