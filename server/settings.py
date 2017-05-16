@@ -2,7 +2,8 @@
 """App settings.
 """
 
-""" Settings for pixhawk
+
+""" Settings for UAV
   Address
     USB to pixhawk: /dev/tty.usbmodem1
     USB Radio Telemetry Ground Module: /dev/tty.SLAB_USBtoUART
@@ -18,12 +19,17 @@
   Refresh rate
     dronekit default is 4 for 4Hz
 """
-UAV_ADDRESS                 = '/dev/tty.usbmodem1'#'/dev/tty.SLAB_USBtoUART'
+UAV_ADDRESS                 = 'udp:0.0.0.0:14550'
 UAV_BAUD                    = 57600
-UAV_HEARTBEAT_TIMEOUT       = 30
-UAV_CONNECTION_TIMEOUT      = 0
-UAV_CONNECTION_TEST_TIMEOUT = 2
+UAV_TIMEOUT_HEARTBEAT       = 30
+UAV_TIMEOUT_CONNECTION      = 5
+UAV_TIMEOUT_CONNECTION_TEST = 5
 UAV_REFRESH_RATE            = 4
+
+UAV_TIMEOUT_PREARM          = 10
+UAV_TIMEOUT_ARM             = 10
+UAV_TIMEOUT_GPS             = 10
+
 
 
 
@@ -31,3 +37,10 @@ UAV_REFRESH_RATE            = 4
 """
 GPS_PORT = '/dev/tty.SLAB_USBtoUART'
 GPS_BAUD = 4800
+
+
+
+
+# start SITL copter simulation
+SITL = False
+

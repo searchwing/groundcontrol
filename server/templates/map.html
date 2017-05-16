@@ -23,19 +23,11 @@ var view = new ol.View({
     zoom   :  6, 
 });
 
-var position = new ol.Feature({
-});
+var position = new ol.Feature({});
 position.setStyle(new ol.style.Style({
-    image: new ol.style.Circle({
-        radius: 6,
-        fill: new ol.style.Fill({
-            color: '#3399CC'
-        }),
-        stroke: new ol.style.Stroke({
-            color: '#fff',
-            width: 2
-        })
-    })
+    image: new ol.style.Icon({
+        src: "/static/plane.png",
+    }),
 }));
 var features = [position,];
 var vectorSource = new ol.source.Vector({features: features,});
@@ -56,6 +48,7 @@ function update(){
             [data["lon"], data["lat"]], "EPSG:4326", "EPSG:3857");
         map.getView().setCenter(coord);
         position.setGeometry(new ol.geom.Point(coord));
+        position.getStyle().getImage().setRotation(data["head"] * 0.01745329251);
     });
 }
 update();

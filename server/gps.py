@@ -9,7 +9,8 @@ from . settings import *
 
 
 class _GPS(threading.Thread):
-    """Internal only.
+    """(Re)connect local serial GPS  in threaded loop
+    Internal only.
     """
 
     def __init__(self, *args, **kwargs):
@@ -30,6 +31,12 @@ class _GPS(threading.Thread):
                 print 'GPS serial failed', e
                 self.ser = None
                 time.sleep(2)
+            except Exception:
+                print 'Unknown GPS error', e
+                self.ser = None
+                time.sleep(2)
+            else:
+                time.sleep(1) # an 1Hz GPS?
 
 
     def _run(self):
@@ -81,22 +88,22 @@ class _GPS(threading.Thread):
             #print latitude, longitude
 
 
-_gps = None
+_gps = _GPS()
 
 
 def init():
     """Start polling/connecting/parsing gps.
+    Call on app initialization, and only once.
     """
-    global _gps
-    assert not _gps
-    _gps = _GPS()
+    print 'GPS connection thread start'
     _gps.start()
 
 
 def get_position():
-    """Get latest known position or None.
+    """Get last known position or None for
+    latitude, longitude, altitude.
+    No need to call more then once per second.
     """
-    assert gsp
     return {
         'lat' : _gps.latitude,
         'lon' : _gps.longitude,

@@ -2,15 +2,10 @@
 """(Re)connect UAV in threaded loop
 """
 import socket, time, threading, exceptions
-import dronekit
+
+import dronekit, dronekit_sitl
+
 from settings import *
-
-
-
-
-TIMEOUT_PREARM = 10
-TIMEOUT_ARM    = 10
-TIMEOUT_GPS    = 10
 
 
 
@@ -30,23 +25,31 @@ class _UAV(threading.Thread):
 
 
     def run(self):
+        if SITL:
+            sitl = dronekit_sitl.start_default() # it's a copter
+            connection_string = sitl.connection_string()
+            print '!!! Simulation. Start SITL copter !!!', connection_string
+        else:
+            connection_string = UAV_ADDRESS
+
         while 1:
-            if self.uav and UAV_CONNECTION_TIMEOUT and \
-                    time.time() - self.last_heartbeat > UAV_CONNECTION_TIMEOUT:
+            if self.uav and UAV_TIMEOUT_CONNECTION and \
+                    time.time() - self.last_heartbeat > UAV_TIMEOUT_CONNECTION:
                 print 'Lost connection to UAV'
                 self.uav.close()
                 self.uav = None
                 self.states = {}
 
             if not self.uav:
-                print 'Connecting UAV %s' % UAV_ADDRESS
+                print 'Connecting UAV %s' % connection_string
+                uav = None
                 try:
-                    self.uav = dronekit.connect(
-                            UAV_ADDRESS,
+                    uav = dronekit.connect(
+                            connection_string,
                             baud              = UAV_BAUD,
                             rate              = UAV_REFRESH_RATE,
-                            wait_ready        = True,
-                            heartbeat_timeout = UAV_HEARTBEAT_TIMEOUT)
+                            heartbeat_timeout = UAV_TIMEOUT_HEARTBEAT,
+                            wait_ready        = True)
 
                 except socket.error:
                     print 'Connecting UAV error: no server'
@@ -60,22 +63,23 @@ class _UAV(threading.Thread):
                 except Exception, e:
                     print 'Connecting UAV error: unkown', e
 
-                if not self.uav:
+                if not uav:
                     print 'Connecting UAV failed'
 
                 else:
                     print 'UAV connected'
+                    self.uav = uav
+
                     self.last_heartbeat = time.time()
                     self.uav.add_attribute_listener(
                             'last_heartbeat', self.on_heartbeat)
-
                     self.uav.add_attribute_listener(
                             '*', self.on_any)
 
-            if self.uav and not UAV_CONNECTION_TIMEOUT:
+            if self.uav and not UAV_TIMEOUT_CONNECTION:
                 break
 
-            time.sleep(UAV_CONNECTION_TEST_TIMEOUT)
+            time.sleep(UAV_TIMEOUT_CONNECTION_TEST)
 
 
     def on_heartbeat(self, *args, **kwargs):
@@ -86,82 +90,44 @@ class _UAV(threading.Thread):
         self.states[name] = value
 
 
-
-
-_uav = None
-_uav_busy = False
+_uav = _UAV()
 
 
 
 
 def init():
     """Start polling/connecting UAV.
-    Must be called on app initialization.
+    Call on app initialization and only once.
     """
-    global _uav
-    assert not _uav
-
-    print 'UAV thread start'
-    _uav = _UAV()
+    print 'UAV connection thread start'
     _uav.start()
 
 
 def get():
     """Get connected UAV or None.
     """
-    assert _uav
     return _uav.uav
 
 
 def get_states():
     """Get current UAV states.
     """
-    assert _uav
     return _uav.states
-
-
-def busy(is_busy):
-    """Block vehicle for running commands.
-    """
-    assert _uav
-
-    if is_busy:
-        print 'Busy block UAV'
-    else:
-        print 'Busy unblock UAV'
-    _uav_busy = is_busy
-
-
-def is_ready():
-    assert _uav
-
-    if not _uav.uav:
-        print 'No UAV conencted'
-    elif _uav_busy:
-        print 'UAV is busy'
-    else:
-        return True
-    return False
 
 
 def prearm():
     """UAV prearm check.
     """
-    assert _uav
-
-    if not is_ready():
-        return False
-
     vehicle = get()
-    assert vehicle
+    if not vehicle:
+        print 'UAV not yet connected'
+        return False
 
     cnt = 0
     while not vehicle.is_armable:
         print 'Waiting until UAV is armable...'
-        if vehicle.mode.name == 'INITIALISING':
-            print 'UAV is initializing...'
         cnt += 1
-        if cnt > TIMEOUT_PREARM:
+        if cnt > UAV_TIMEOUT_PREARM:
             print 'UAV timeout armable'
             return False
         time.sleep(1)
@@ -180,19 +146,21 @@ def prearm():
 
 
 def arm():
-    assert _uav
-
-    if not is_ready():
+    vehicle = get()
+    if not vehicle:
+        print 'UAV not yet connected'
         return False
 
-    vehicle = get()
-    assert vehicle
+    if not prearm(): # prearm if not yet done
+        return
+
+    vehicle.mode = dronekit.VehicleMode('GUIDED') # ?
 
     vehicle.armed = True
     cnt = 0
     while not vehicle.armed:
         print 'Waiting until UAV is armed...'
-        if cnt > TIMEOUT_ARM:
+        if cnt > UAV_TIMEOUT_ARM:
             print 'UAV timeout arm'
             return False
         time.sleep(1)
