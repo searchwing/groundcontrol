@@ -33,6 +33,13 @@ UAV_TIMEOUT_GPS             = 10
 
 
 
+"""Settings for DB
+"""
+DATABASE = 'db.sql'
+
+
+
+
 """ Settings for local GPS
 """
 GPS_PORT = '/dev/tty.SLAB_USBtoUART'

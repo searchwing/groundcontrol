@@ -5,7 +5,8 @@ Start flask server.
 import socket as _socket
 import flask as _flask
 
-import gps, uav
+
+import db, gps, uav
 
 
 
@@ -23,12 +24,17 @@ _fix_socket()
 
 
 
-# connecting uav
+# Connect DB
+db.init()
+
+
+# Connect UAV
 uav.init()
 
-# connecting gps
-#gps.init()
 
-# the http server framework
+# Connect GPS
+gps.init()
+
+
+# The http server framework
 app = _flask.Flask('uav')
-

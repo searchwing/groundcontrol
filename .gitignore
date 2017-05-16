@@ -3,3 +3,4 @@
 htpasswd
 test
 mav.*
+*.sql
