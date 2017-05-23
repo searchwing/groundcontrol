@@ -9,8 +9,6 @@ import flask as _flask
 import db, gps, uav
 
 
-
-
 # Reuse flask sockets
 # http://stackoverflow.com/questions/25535975/release-python-flask-port-when-script-is-terminated
 def _fix_socket():
@@ -24,8 +22,12 @@ _fix_socket()
 
 
 
+# The http server framework
+app = _flask.Flask('uav')
+
+
 # Connect DB
-db.init()
+db.init(app)
 
 
 # Connect UAV
@@ -35,6 +37,3 @@ uav.init()
 # Connect GPS
 gps.init()
 
-
-# The http server framework
-app = _flask.Flask('uav')

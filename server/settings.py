@@ -1,6 +1,19 @@
 # -*- coding: utf-8 -*-
 """App settings.
 """
+import os
+
+
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+
+
+
+"""Settings for DB
+"""
+DATABASE = os.path.join(BASEDIR, 'db.sqlite3')
+
+
 
 
 """ Settings for UAV
@@ -29,13 +42,6 @@ UAV_REFRESH_RATE            = 4
 UAV_TIMEOUT_PREARM          = 10
 UAV_TIMEOUT_ARM             = 10
 UAV_TIMEOUT_GPS             = 10
-
-
-
-
-"""Settings for DB
-"""
-DATABASE = 'db.sql'
 
 
 
