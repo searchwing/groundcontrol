@@ -1,31 +1,21 @@
 # -*- coding: utf-8 -*-
 """Provide DB functions.
 """
-from datetime import datetime
 import sqlite3
-
-from flask import g
-
 from settings import *
 
 
+_db = None
 
 
-def init(app): 
-    """
-    Open SQL DB.
-    Call on app initialization, and only once.
-    """
-    with app.app_context():
-        _init()
-
-
-def _init():
+def init():
     """Internal.
     """
+    global db
     print 'Connect DB'
-    g.database = sqlite3.connect(DATABASE)
-    cur = cursor()
+
+    _db = sqlite3.connect(DATABASE)
+    cur = _db.cursor()
 
     cur.execute('SELECT SQLITE_VERSION()')
     print 'Connected DB sqlite', cur.fetchone()[0]
@@ -41,13 +31,13 @@ def _init():
 
 
 def db():
-    return g.database
+    return _db
 
 
 
 
 def cursor():
-    return db().cursor()
+    return _db.cursor()
 
 
 
@@ -61,8 +51,8 @@ class Mission:
         self.waypoints = waypoints if not waypoints == None else []
 
 
-    def save():
-        cursor = cursor()
+    def save(self):
+        cur = cursor()
 
 
     @staticmethod
@@ -74,7 +64,8 @@ class Mission:
 
     @staticmethod
     def for_name(name):
-        cursor = cursor()
+        cur = cursor()
+        cur.execute("select * from missions where name='%s'" % name)
 
 
 

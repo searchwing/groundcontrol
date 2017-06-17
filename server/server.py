@@ -3,22 +3,14 @@
 """
 import time, threading
 
-from flask import render_template, jsonify
 from dronekit import VehicleMode, LocationGlobal, Command
 from pymavlink import mavutil
 
-from . import app, gps, uav
+import db, gps, uav
 
 
 
 
-def _run(run):
-    """Run passed function in a thread.
-    Internal only.
-    """
-    thread = threading.Thread(target = run)
-    thread.daemon = True
-    thread.start()
 
 
 

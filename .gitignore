@@ -4,3 +4,6 @@ htpasswd
 test
 mav.*
 *.sql
+venv
+*.sqlite3
+*.py_alchemy

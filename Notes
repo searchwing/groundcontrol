@@ -5,3 +5,16 @@ sudo virtualenv venv
 sudo chown -R pi:pi venv
 . /opt/venv/bin/activate
 pip install future mavproxy
+
+
+# Install video streaming on raspberry pi zero w, raspbian jessie
+sudo curl http://www.linux-projects.org/listing/uv4l_repo/lrkey.asc | sudo apt-key add -
+# Add to /etc/apt/sources.list:
+#  deb http://www.linux-projects.org/listing/uv4l_repo/raspbian/ jessie main
+sudo apt-get update
+sudo apt-get install uv4l uv4l-raspicam
+sudo apt-get install uv4l-raspicam-extras
+sudo apt-get install uv4l-server uv4l-uvc uv4l-xscreen uv4l-mjpegstream
+sudo reboot
+# ... http://<host>:8080/
+
