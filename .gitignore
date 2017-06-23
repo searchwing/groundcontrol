@@ -1,9 +1,9 @@
 *.swp
 *.pyc
 htpasswd
-test
-mav.*
-*.sql
 venv
+test
+*.sql
 *.sqlite3
-*.py_alchemy
+*.alchemy
+mav.*
