@@ -92,6 +92,8 @@ class UAV(threading.Thread):
 
 
 
+    def get_states(self):
+        return _vehicle2states(self.uav)
 
 
     def prearm(self):
@@ -150,3 +152,33 @@ class UAV(threading.Thread):
 
 uav = UAV()
 
+
+def _vehicle2states(vehicle):
+    if not vehicle:
+        return {}
+    return {
+        'version_major'             : vehicle.version.major,
+        'version_patch'             : vehicle.version.patch,
+        'version_release'           : vehicle.version.release,
+        'system_status'             : vehicle.system_status.state,
+        'is_armable'                : vehicle.is_armable,
+        'armed'                     : vehicle.armed,
+        'gps_fix'                   : vehicle.gps_0.fix_type,
+        'gps_sats'                  : vehicle.gps_0.satellites_visible,
+        'location_global_frame_alt' : vehicle.location.global_frame.alt,
+        'location_global_frame_lon' : vehicle.location.global_frame.lon,
+        'location_global_frame_lat' : vehicle.location.global_frame.lat,
+        'rangefinder_distance'      : vehicle.rangefinder.distance,
+        'rangefinder_voltage'       : vehicle.rangefinder.voltage,
+        'attitude_pitch'            : vehicle.attitude.pitch,
+        'attitude_roll'             : vehicle.attitude.roll,
+        'attitude_yaw'              : vehicle.attitude.yaw,
+        'velocity'                  : vehicle.velocity,
+        'airspeed'                  : vehicle.airspeed,
+        'groundspeed'               : vehicle.groundspeed,
+        'heading'                   : vehicle.heading,
+        'battery_voltage'           : vehicle.battery.voltage,
+        'battery_current'           : vehicle.battery.current,
+        'battery_level'             : vehicle.battery.current,
+        'last_heartbeat'            : vehicle.last_heartbeat,
+    }

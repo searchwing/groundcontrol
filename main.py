@@ -6,25 +6,34 @@ activate_this = '/home/pi/venv/bin/activate_this.py'
 execfile(activate_this, dict(__file__=activate_this))
 
 import time
-from lib.gps import gps
-from lib.switchboard import board
+
 from lib import ui
+from lib.gps import gps
+from lib.uav import uav
+from lib.switchboard import board
 
 
 def main():
 
-    gps.start()
-    board.start()
     ui.init()
+
+    gps.start()
+#    board.start()
+
+    uav.start()
 
     last = None
     while 1:
-        bpos = board.get_position()
+        print uav.get_states()
+        bpos = gps.get_position()#board.get_position()
         if bpos:
             gpos = gps.get_position()
             dist = gpos.distance(bpos)
-            text = 'lat %3.5f lon %3.5f %4im' % (
-                    bpos.lat, bpos.lon, dist)
+
+            text = """lat %3.5f
+lon %3.5f
+m   %2i""" % (bpos.lat, bpos.lon, dist)
+
             if not text == last:
                 last = text
                 ui.text(text)

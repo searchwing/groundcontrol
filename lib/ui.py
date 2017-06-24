@@ -2,6 +2,11 @@
 import pygame
 
 
+FONTNAME = 'droidsansmono'
+FONTSIZE = 25
+SCREENSIZE = (640, 480)
+
+
 screen, font = None, None
 
 
@@ -9,8 +14,8 @@ def init():
     global screen, font
 
     pygame.init()
-    screen = pygame.display.set_mode((800, 480), pygame.FULLSCREEN)
-    font = pygame.font.SysFont("comicsansms", 72)
+    screen = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
+    font = pygame.font.SysFont(FONTNAME, FONTSIZE)
 
 
 def text(text):
