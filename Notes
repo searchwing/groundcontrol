@@ -1,10 +1,11 @@
 # Install mavproxy on raspbian:
 sudo apt-get install virtualenv python-dev libxml2-dev libxslt-dev -y
-cd /opt
-sudo virtualenv venv
-sudo chown -R pi:pi venv
-. /opt/venv/bin/activate
+virtualenv venv
+. ./venv/bin/activate
 pip install future mavproxy
+# For searchwing groundcontrol:
+sudo apt-get install python-pygame -y
+pip install dronekit dronekit_sitl
 
 
 # Install video streaming on raspberry pi zero w, raspbian jessie
