@@ -63,7 +63,7 @@ class Board(SerialThread):
             offs, direction = line.split(',')
             offs, direction = int(offs), int(direction)
 
-            if offs == 0:
+            if direction:
                 self.is_lat = not self.is_lat
 
             else:
