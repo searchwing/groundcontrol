@@ -29,6 +29,29 @@ class Board(SerialThread):
         self.is_lat = True
 
 
+
+    def startup(self):
+        self.ser.write("1,0,0,0\r")
+        time.sleep(0.2)
+        self.ser.write("0,1,0,0\r")
+        time.sleep(0.2)
+        self.ser.write("0,0,1,0\r")
+        time.sleep(0.2)
+        self.ser.write("0,0,0,1\r")
+        time.sleep(0.2)
+        self.ser.write("1,0,0,0\r")
+        time.sleep(0.2)
+        self.ser.write("2,1,0,0\r")
+        time.sleep(0.2)
+        self.ser.write("2,2,1,0\r")
+        time.sleep(0.2)
+        self.ser.write("2,2,2,1\r")
+        time.sleep(0.2)
+        self.ser.write("2,2,2,2\r")
+        time.sleep(0.5)
+        self.ser.write("1,1,1,1\r")
+        time.sleep(0.5)
+        
     def wait(self, timeout = None):
         self.cond.acquire()
         self.cond.wait(timeout = timeout)
@@ -42,7 +65,7 @@ class Board(SerialThread):
 
 
     def work(self):
-
+        #self.startup()
         while 1:
             if self.pos:
                 break
@@ -55,26 +78,32 @@ class Board(SerialThread):
                 time.sleep(1)
 
         while 1:
-            line = self.ser.readline()
+            line = self.ser.readline().strip()
             if not line:
                 continue
-            line = line[:-2]
 
-            offs, direction = line.split(',')
-            offs, direction = int(offs), int(direction)
+            enable, offs, direction, arm, launch, abort = map(int, line.split(','))
 
-            if direction:
-                self.is_lat = not self.is_lat
-
+            if not enable:
+                self.ser.write("0,2,0,0\r")
+                continue
             else:
-                offs /= 1000000.0
 
-                if self.is_lat:
-                    self.pos.lat += offs
+            
+                if direction:
+                    self.ser.write("2,0,0,0\r")
+                    self.is_lat = not self.is_lat
+
                 else:
-                    self.pos.lon += offs
+                    self.ser.write("1,0,0,0\r")
+                    offs /= 1000000.0
 
-                self.notify()
+                    if self.is_lat:
+                        self.pos.lat += offs
+                    else:
+                        self.pos.lon += offs
+
+            self.notify()
 
 
     def get_position(self):
