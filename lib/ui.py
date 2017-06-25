@@ -4,7 +4,7 @@ import pygame
 
 FONTNAME = 'droidsansmono'
 FONTSIZE = 25
-SCREENSIZE = (640, 480)
+SCREENSIZE = (480, 800)
 
 
 screen, font = None, None
