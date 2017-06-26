@@ -5,6 +5,7 @@ import socket, time, threading, exceptions
 
 import dronekit, dronekit_sitl
 
+from . geo import Position
 from . settings import *
 
 
@@ -96,6 +97,20 @@ class UAV(threading.Thread):
         return _vehicle2states(self.uav)
 
 
+    def ts(self):
+        pass
+
+
+    def get_position(self):
+        states = self.get_states()
+        if states:
+            return Position(
+                lat = states.get('location_global_frame_lat'),
+                lon = states.get('location_global_frame_lon'),
+                alt = states.get('location_global_frame_alt'))
+        return None
+
+
     def prearm(self):
         """UAV prearm check.
         """
@@ -132,7 +147,7 @@ class UAV(threading.Thread):
             print 'UAV not yet connected'
             return False
 
-        if not prearm(): # prearm if not yet done
+        if not self.prearm(): # prearm if not yet done
             return
 
         vehicle.mode = dronekit.VehicleMode('GUIDED') # ?

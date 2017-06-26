@@ -10,7 +10,7 @@ from . settings import *
 from . serialthread import SerialThread
 
 
-NAME = 'Rotary'
+NAME = 'Board'
 PORT = ROTARY_PORT
 BAUD = ROTARY_BAUD
 
@@ -25,12 +25,11 @@ class Board(SerialThread):
     def __init__(self, *args, **kwargs):
         super(Board, self).__init__(NAME, PORT, BAUD)
         self.cond = threading.Condition()
+        self.arm, self.launch, self.abort = False, False, False
         self.pos = None
-        self.is_lat = True
 
 
-
-    def startup(self):
+    def iluminate(self):
         self.ser.write("1,0,0,0\r")
         time.sleep(0.2)
         self.ser.write("0,1,0,0\r")
@@ -52,6 +51,7 @@ class Board(SerialThread):
         self.ser.write("1,1,1,1\r")
         time.sleep(0.5)
         
+
     def wait(self, timeout = None):
         self.cond.acquire()
         self.cond.wait(timeout = timeout)
@@ -65,7 +65,8 @@ class Board(SerialThread):
 
 
     def work(self):
-        #self.startup()
+        self.iluminate()
+
         while 1:
             if self.pos:
                 break
@@ -77,33 +78,36 @@ class Board(SerialThread):
                 self.log('No local position')
                 time.sleep(1)
 
+        is_lat = True
         while 1:
             line = self.ser.readline().strip()
             if not line:
                 continue
 
             enable, offs, direction, arm, launch, abort = map(int, line.split(','))
+            self.enable, self.arm, self.launch, self.abort = bool(enable), bool(arm), bool(launch), bool(abort)
+            print 'enable:', enable, ' offset:', offs, ' direction:', direction, ' arm:', self.arm, ' launch:', self.launch, ' abort:', self.abort
 
             if not enable:
                 self.ser.write("0,2,0,0\r")
                 continue
             else:
-
             
                 if direction:
                     self.ser.write("2,0,0,0\r")
-                    self.is_lat = not self.is_lat
+                    self.log('Go from %s' % ('lon to lat' if is_lat else 'lat to lon',))
+                    is_lat = not is_lat
 
                 else:
                     self.ser.write("1,0,0,0\r")
                     offs /= 1000000.0
 
-                    if self.is_lat:
+                    if is_lat:
                         self.pos.lat += offs
                     else:
                         self.pos.lon += offs
 
-            self.notify()
+                    self.notify()
 
 
     def get_position(self):
