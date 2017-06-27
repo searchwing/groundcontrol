@@ -3,6 +3,7 @@
 """
 import socket, time, threading, exceptions
 
+from pymavlink import mavutil
 import dronekit, dronekit_sitl
 
 from . geo import Position
@@ -23,6 +24,7 @@ class UAV(threading.Thread):
         self.last_heartbeat = 0
         self.uav = None
         self.states = {}
+        self.target = None
 
 
     def run(self):
@@ -97,10 +99,6 @@ class UAV(threading.Thread):
         return _vehicle2states(self.uav)
 
 
-    def ts(self):
-        pass
-
-
     def get_position(self):
         states = self.get_states()
         if states:
@@ -111,6 +109,33 @@ class UAV(threading.Thread):
         return None
 
 
+    def set_target(self, pos):
+        uav = self.uav
+        if not uav:
+            print 'UAV not yet connected'
+            return False
+
+        self.target = pos
+
+        uav.commands.clear()
+
+        cur = self.get_position()
+        cmd = dronekit.Command(0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            0, 1, 0, 0, 0, 0, cur.lat, cur.lon, cur.alt)
+        uav.commands.add(cmd)
+
+        cmd = dronekit.Command(0, 0, 0,
+           mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+           mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+           0, 0, 0, 0, 0, 0,
+           pos.lat, pos.lon, pos.alt)
+        uav.commands.add(cmd)
+
+        uav.commands.upload()
+
+
     def prearm(self):
         """UAV prearm check.
         """
@@ -119,29 +144,33 @@ class UAV(threading.Thread):
             print 'UAV not yet connected'
             return False
 
-        cnt = 0
-        while not vehicle.is_armable:
-            print 'Waiting until UAV is armable...'
-            cnt += 1
-            if cnt > UAV_TIMEOUT_PREARM:
-                print 'UAV timeout armable'
-                return False
-            time.sleep(1)
-        print 'UAV is armable'
+        vehicle.mode = dronekit.VehicleMode('GUIDED')
+
+        #cnt = 0
+        #while not vehicle.is_armable:
+        #    print 'Waiting until UAV is armable...'
+        #    cnt += 1
+        #    if cnt > UAV_TIMEOUT_PREARM:
+        #        print 'UAV timeout armable'
+        #        return False
+        #    time.sleep(1)
+        #print 'UAV is armable'
 
         cnt = 0
         while vehicle.gps_0.fix_type < 2:
             print 'Waiting for UAV GPS...'
             cnt += 1
-            if cnt > TIMEOUT_GPS:
-                print 'UAV timeout gps'
-                return False
+            #if cnt > TIMEOUT_GPS:
+            #    print 'UAV timeout gps'
+            #    return False
 
         print 'UAV GPS fix:', vehicle.gps_0.fix_type
         return True
 
 
     def arm(self):
+        print 'Arm'
+
         vehicle = self.uav
         if not vehicle:
             print 'UAV not yet connected'
@@ -162,6 +191,44 @@ class UAV(threading.Thread):
             time.sleep(1)
 
         print 'UAV is armed'
+        return True
+
+
+    def land(self):
+        print 'Land'
+
+        vehicle = self.uav
+        if not vehicle:
+            print 'UAV not yet connected'
+            return False
+
+        vehicle.mode = dronekit.VehicleMode('LAND')
+        vehicle.flush()
+        return True
+
+
+
+    def disarm(self):
+        print 'Disarm'
+
+        vehicle = self.uav
+        if not vehicle:
+            print 'UAV not yet connected'
+            return False
+
+        vehicle.armed = False
+        vehicle.flush()
+        return True
+
+
+    def launch(self):
+        print 'Launch'
+
+        uav = self.uav
+        if not uav:
+            print 'UAV not yet connected'
+            return False
+        uav.simple_takeoff(self.target.alt)
         return True
 
 

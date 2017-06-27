@@ -22,7 +22,7 @@ class GPS(SerialThread):
 
     def __init__(self):
         super(GPS, self).__init__(NAME, PORT, BAUD)
-        self.position, self.ts, self.tss = None, None, None
+        self.position, self.ts, self.dt = None, None, None
 
 
     def work(self):

@@ -46,13 +46,13 @@ UAV_TIMEOUT_GPS             = 10
 
 """ Settings for local GPS
 """
-GPS_PORT = '/dev/ttyUSB1'
+GPS_PORT = '/dev/ttyUSB0'
 GPS_BAUD = 4800
 
 
 """Settings for rotary control
 """
-ROTARY_PORT = '/dev/ttyUSB0'
+ROTARY_PORT = '/dev/ttyUSB1'
 ROTARY_BAUD = 115200
 
 

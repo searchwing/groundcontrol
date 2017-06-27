@@ -22,7 +22,10 @@ def init():
 
 def show():
     last = None
-    armed = False
+    arm = False
+    launch = False
+    abort = False
+
     while 1:
         text = '...'
 
@@ -30,12 +33,16 @@ def show():
         upos = uav.get_position()
         bpos = board.get_position()
 
+        dt = gps.dt or ''
+
         if upos:
-            text = """Current
+            text = """
+Current
+Datetime  %s
 Latitude  %3.5f
 Longitude %3.5f
 Altitude  %7im
-""" % (upos.lat, upos.lon, upos.alt)
+""" % (dt, upos.lat, upos.lon, upos.alt)
 
 
         dist = ''
@@ -44,7 +51,6 @@ Altitude  %7im
                 dist = gpos.distance(bpos)
 
             text = """%s
-
 Target
 Latitude  %3.5f
 Longitude %3.5f
@@ -57,10 +63,22 @@ Distance  %7im
             last = text
             ui.text(text)
 
-
-        if board.arm and not armed and uav.get_states():
-            print 'arm'
+        if bpos and \
+                board.arm and not arm and uav.get_states():
+            bpos.alt = 200
+            uav.set_target(bpos)
             uav.arm()
+        if bpos:
+            arm = board.arm
+
+        if board.launch and not launch:
+            uav.launch()
+        launch = board.launch
+
+        if board.abort and not abort:
+            uav.land()
+            uav.disarm()
+        abort = board.abort
 
         time.sleep(0.01)
         board.wait(1)
