@@ -27,24 +27,29 @@ class UAV(threading.Thread):
         self.target = None
 
 
+    def log(self, *msg):
+        msg = ' '.join((str(m) for m in msg))
+        print 'UAV: %s' % msg
+
+
     def run(self):
         if SITL:
             sitl = dronekit_sitl.start_default() # it's a copter
             connection_string = sitl.connection_string()
-            print '!!! Simulation. Start SITL copter !!!', connection_string
+            self.log('!!! Simulation. Start SITL copter !!!', connection_string)
         else:
             connection_string = UAV_ADDRESS
 
         while 1:
             if self.uav and UAV_TIMEOUT_CONNECTION and \
                     time.time() - self.last_heartbeat > UAV_TIMEOUT_CONNECTION:
-                print 'Lost connection to UAV'
+                self.log('Lost connection to UAV')
                 self.uav.close()
                 self.uav = None
                 self.states = {}
 
             if not self.uav:
-                print 'Connecting UAV %s' % connection_string
+                self.log('Connecting UAV %s' % connection_string)
                 uav = None
                 try:
                     uav = dronekit.connect(
@@ -55,22 +60,22 @@ class UAV(threading.Thread):
                             wait_ready        = True)
 
                 except socket.error:
-                    print 'Connecting UAV error: no server'
+                    self.log('Connecting UAV error: no server')
 
                 except exceptions.OSError:
-                    print 'Connecting UAV error: no serial'
+                    self.log('Connecting UAV error: no serial')
 
                 except dronekit.APIException:
-                    print 'Connecting UAV error: timeout'
+                    self.log('Connecting UAV error: timeout')
 
                 except Exception, e:
-                    print 'Connecting UAV error: unkown', e
+                    self.log('Connecting UAV error: unkown', e)
 
                 if not uav:
-                    print 'Connecting UAV failed'
+                    self.log('Connecting UAV failed')
 
                 else:
-                    print 'UAV connected'
+                    self.log('UAV connected')
                     self.uav = uav
 
                     self.last_heartbeat = time.time()
@@ -95,6 +100,12 @@ class UAV(threading.Thread):
 
 
 
+    def get_uav(self):
+        if not self.uav:
+            self.log('Not connected')
+        return self.uav
+
+
     def get_states(self):
         return _vehicle2states(self.uav)
 
@@ -110,10 +121,9 @@ class UAV(threading.Thread):
 
 
     def set_target(self, pos):
-        uav = self.uav
-        if not uav:
-            print 'UAV not yet connected'
-            return False
+        self.log('Set target', pos)
+        uav = self.get_uav()
+        if not uav: return
 
         self.target = pos
 
@@ -139,42 +149,37 @@ class UAV(threading.Thread):
     def prearm(self):
         """UAV prearm check.
         """
-        vehicle = self.uav
-        if not vehicle:
-            print 'UAV not yet connected'
-            return False
+        uav = self.get_uav()
+        if not uav: return False
 
         vehicle.mode = dronekit.VehicleMode('GUIDED')
 
         #cnt = 0
         #while not vehicle.is_armable:
-        #    print 'Waiting until UAV is armable...'
+        #    self.log('Waiting until UAV is armable...')
         #    cnt += 1
         #    if cnt > UAV_TIMEOUT_PREARM:
-        #        print 'UAV timeout armable'
+        #        self.log('timeout armable')
         #        return False
         #    time.sleep(1)
-        #print 'UAV is armable'
+        #self.log('is armable')
 
         cnt = 0
         while vehicle.gps_0.fix_type < 2:
-            print 'Waiting for UAV GPS...'
+            self.log('Waiting for UAV GPS...')
             cnt += 1
             #if cnt > TIMEOUT_GPS:
-            #    print 'UAV timeout gps'
+            #    self.log('UAV timeout gps'
             #    return False
 
-        print 'UAV GPS fix:', vehicle.gps_0.fix_type
+        self.log('GPS fix:', vehicle.gps_0.fix_type)
         return True
 
 
     def arm(self):
-        print 'Arm'
-
-        vehicle = self.uav
-        if not vehicle:
-            print 'UAV not yet connected'
-            return False
+        self.log('Arm')
+        vehicle = self.get_uav()
+        if not vehicle: return False
 
         if not self.prearm(): # prearm if not yet done
             return
@@ -184,37 +189,30 @@ class UAV(threading.Thread):
         vehicle.armed = True
         cnt = 0
         while not vehicle.armed:
-            print 'Waiting until UAV is armed...'
+            self.log('Waiting until UAV is armed...')
             if cnt > UAV_TIMEOUT_ARM:
-                print 'UAV timeout arm'
+                self.log('UAV timeout arm')
                 return False
             time.sleep(1)
 
-        print 'UAV is armed'
+        self.log('UAV is armed')
         return True
 
 
     def land(self):
-        print 'Land'
-
-        vehicle = self.uav
-        if not vehicle:
-            print 'UAV not yet connected'
-            return False
+        self.log('Land')
+        vehicle = self.get_uav()
+        if not vehicle: return False
 
         vehicle.mode = dronekit.VehicleMode('LAND')
         vehicle.flush()
         return True
 
 
-
     def disarm(self):
-        print 'Disarm'
-
-        vehicle = self.uav
-        if not vehicle:
-            print 'UAV not yet connected'
-            return False
+        self.log('Disarm')
+        vehicle = self.get_uav()
+        if not vehicle: return False
 
         vehicle.armed = False
         vehicle.flush()
@@ -222,12 +220,10 @@ class UAV(threading.Thread):
 
 
     def launch(self):
-        print 'Launch'
+        self.log('Launch')
+        vehicle = self.get_uav()
+        if not vehicle: return False
 
-        uav = self.uav
-        if not uav:
-            print 'UAV not yet connected'
-            return False
         uav.simple_takeoff(self.target.alt)
         return True
 

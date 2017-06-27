@@ -75,6 +75,7 @@ class GPS(SerialThread):
 
                 self.position = Position(lat = latitude, lon = longitude, alt = altitude)
 
+                self.notify()
                 time.sleep(1) # GPS 1hz?
 
 

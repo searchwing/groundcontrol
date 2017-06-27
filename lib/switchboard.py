@@ -2,9 +2,10 @@
 """Provide a GPS position relative to absolute local GPS position
 actuated by a rotary encoder on the switchboard.
 """
-import time, threading
+import time
 
 from . gps import gps
+from . uav import uav
 from . geo import Position
 from . settings import *
 from . serialthread import SerialThread
@@ -24,44 +25,25 @@ class Board(SerialThread):
 
     def __init__(self, *args, **kwargs):
         super(Board, self).__init__(NAME, PORT, BAUD)
-        self.cond = threading.Condition()
-        self.arm, self.launch, self.abort = False, False, False
-        self.pos = None
+        self.armed, self.pos = False, None
 
 
     def iluminate(self):
-        self.ser.write("1,0,0,0\r")
-        time.sleep(0.2)
-        self.ser.write("0,1,0,0\r")
-        time.sleep(0.2)
-        self.ser.write("0,0,1,0\r")
-        time.sleep(0.2)
-        self.ser.write("0,0,0,1\r")
-        time.sleep(0.2)
-        self.ser.write("1,0,0,0\r")
-        time.sleep(0.2)
-        self.ser.write("2,1,0,0\r")
-        time.sleep(0.2)
-        self.ser.write("2,2,1,0\r")
-        time.sleep(0.2)
-        self.ser.write("2,2,2,1\r")
-        time.sleep(0.2)
-        self.ser.write("2,2,2,2\r")
-        time.sleep(0.5)
-        self.ser.write("1,1,1,1\r")
-        time.sleep(0.5)
-        
+        self.log('Iluminate')
 
-    def wait(self, timeout = None):
-        self.cond.acquire()
-        self.cond.wait(timeout = timeout)
-        self.cond.release()
-
-
-    def notify(self):
-        self.cond.acquire()
-        self.cond.notifyAll()
-        self.cond.release()
+        for code in (
+                '1,0,0,0',
+                '0,1,0,0',
+                '0,0,1,0',
+                '0,0,0,1',
+                '1,0,0,0',
+                '2,1,0,0',
+                '2,2,1,0',
+                '2,2,2,1',
+                '2,2,2,2',
+                '1,1,1,1',):
+            self.ser.write('%s\r' % code)
+            time.sleep(0.2)
 
 
     def work(self):
@@ -81,33 +63,59 @@ class Board(SerialThread):
         is_lat = True
         while 1:
             line = self.ser.readline().strip()
+            self.log(line)
             if not line:
                 continue
 
-            enable, offs, direction, arm, launch, abort = map(int, line.split(','))
-            self.enable, self.arm, self.launch, self.abort = bool(enable), bool(arm), bool(launch), bool(abort)
-            print 'enable:', enable, ' offset:', offs, ' direction:', direction, ' arm:', self.arm, ' launch:', self.launch, ' abort:', self.abort
+            try:
+                enable, offs, direction, armed, launch, abort = map(int, line.split(','))
+            except ValueError:
+                continue
+            armed, launch, abort = bool(armed), bool(launch), bool(abort)
+            self.log('enable', enable, 'offs', offs, 'direction', direction, 'armed', armed, 'launch', launch, 'abort', abort)
+
 
             if not enable:
                 self.ser.write("0,2,0,0\r")
                 continue
+
+
+            if direction:
+                self.ser.write("2,0,0,0\r")
+                self.log('Go from %s' % ('lon to lat' if is_lat else 'lat to lon',))
+                is_lat = not is_lat
+
+
+            if armed and not self.armed:
+                print 'Arm'
+                uav.arm()
+
+            if not armed and self.armed:
+                print 'Disarm'
+                uav.disarm()
+ 
+            self.armed = armed
+
+
+            if launch:
+                print 'Launch'
+                uav.launch()
+            self.launch = launch
+
+
+            if abort:
+                print 'Aboard'
+                uav.abort()
+
+
+            self.ser.write("1,0,0,0\r")
+            offs /= 1000000.0
+            if is_lat:
+                self.pos.lat += offs
             else:
-            
-                if direction:
-                    self.ser.write("2,0,0,0\r")
-                    self.log('Go from %s' % ('lon to lat' if is_lat else 'lat to lon',))
-                    is_lat = not is_lat
+                self.pos.lon += offs
 
-                else:
-                    self.ser.write("1,0,0,0\r")
-                    offs /= 1000000.0
-
-                    if is_lat:
-                        self.pos.lat += offs
-                    else:
-                        self.pos.lon += offs
-
-                    self.notify()
+            self.notify()
 
 
     def get_position(self):

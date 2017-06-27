@@ -13,13 +13,26 @@ class SerialThread(threading.Thread):
         self.name = name
         self.port, self.baud, self.timeout = port, baud, timeout
 
+        self.cond = threading.Condition()
         self.daemon = True
         self.ser = None
 
 
     def log(self, *msg):
         msg = ' '.join((str(m) for m in msg))
-        print '%s %s' % (self.name, msg,)
+        print '%s: %s' % (self.name, msg,)
+        
+
+    def wait(self, timeout = None):
+        self.cond.acquire()
+        self.cond.wait(timeout = timeout)
+        self.cond.release()
+
+
+    def notify(self):
+        self.cond.acquire()
+        self.cond.notifyAll()
+        self.cond.release()
 
 
     def run(self):

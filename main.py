@@ -63,6 +63,7 @@ Distance  %7im
             last = text
             ui.text(text)
 
+        """
         if bpos and \
                 board.arm and not arm and uav.get_states():
             bpos.alt = 200
@@ -79,6 +80,7 @@ Distance  %7im
             uav.land()
             uav.disarm()
         abort = board.abort
+        """
 
         time.sleep(0.01)
         board.wait(1)
