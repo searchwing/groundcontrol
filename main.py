@@ -13,19 +13,15 @@ from lib.uav import uav
 from lib.switchboard import board
 
 
-def init():
+def show():
+
     ui.init()
     gps.start()
     board.start()
     uav.start()
 
 
-def show():
     last = None
-    arm = False
-    launch = False
-    abort = False
-
     while 1:
         text = '...'
 
@@ -63,36 +59,12 @@ Distance  %7im
             last = text
             ui.text(text)
 
-        """
-        if bpos and \
-                board.arm and not arm and uav.get_states():
-            bpos.alt = 200
-            uav.set_target(bpos)
-            uav.arm()
-        if bpos:
-            arm = board.arm
-
-        if board.launch and not launch:
-            uav.launch()
-        launch = board.launch
-
-        if board.abort and not abort:
-            uav.land()
-            uav.disarm()
-        abort = board.abort
-        """
-
-        time.sleep(0.01)
+        time.sleep(0.05)
         board.wait(1)
 
 
     
 
 if __name__ == '__main__':
-   init()
    show()
-   #t = threading.Thread(target = show)
-   #t.daemon = True
-   #t.start()
-   #t.join()
 

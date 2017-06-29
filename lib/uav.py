@@ -10,26 +10,54 @@ from . geo import Position
 from . settings import *
 
 
+IDLE      = 1
+TARGETSET = 2
+PREARMED  = 3
+ARMED     = 4
+LAUNCHED  = 5
+LANDED    = 6
+ABOART    = 7
+
+
+INT2STATE = {
+    1: 'IDLE',
+    2: 'TARGETSET', 
+    3: 'PREARMED',
+    4: 'ARMED',
+    5: 'LAUNCHED',
+    6: 'LANDED',
+    7: 'ABOART',
+}
+
+
 
 
 class UAV(threading.Thread):
     """(Re)connect UAV in threaded loop
-    Internal only.
     """
 
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.daemon = True
 
+        self.state = IDLE
+
         self.last_heartbeat = 0
-        self.uav = None
-        self.states = {}
-        self.target = None
+        self.uav            = None
+        self.states         = {}
+        self.target         = None
 
 
     def log(self, *msg):
         msg = ' '.join((str(m) for m in msg))
         print 'UAV: %s' % msg
+
+
+    def log(self, *msg):
+        msg = ' '.join((str(m) for m in msg))
+        print 'UAV error: %s' % msg
+
+
 
 
     def run(self):
@@ -103,6 +131,7 @@ class UAV(threading.Thread):
     def get_uav(self):
         if not self.uav:
             self.log('Not connected')
+            return None
         return self.uav
 
 
@@ -120,10 +149,45 @@ class UAV(threading.Thread):
         return None
 
 
+
+
+    def _set_state(self, s):
+        self.log('Set state', INT2STATE(s))
+        
+        if not self.get_uav():
+            return
+
+        if s == TARGETSET:
+            self.error('Please first got into idle mode')
+            return False
+
+        if s == PREARMED and not self.state == TARGETSET:
+            self.error('First please set target')
+            return False
+
+        if s == ARMED and not self.state == PREARMED:
+            self.error('Please first prearm')
+            return False
+
+        if s == LAUNCHED and not self.state == ARMED:
+            self.error('Please first arm')
+            return False
+
+        if s == LAND and not self.state == LAUNCHED:
+            self.error('Not launched')
+            return False
+
+        if s == ABOART:
+            pass
+
+        self.state = s
+        return True
+
+
     def set_target(self, pos):
         self.log('Set target', pos)
-        uav = self.get_uav()
-        if not uav: return
+        if not self._set_state(TARGETSET):
+            return False
 
         self.target = pos
 
@@ -149,13 +213,14 @@ class UAV(threading.Thread):
     def prearm(self):
         """UAV prearm check.
         """
-        uav = self.get_uav()
-        if not uav: return False
+        self.log('Prearm')
+        if not self._set_state(PREARMED):
+            return False
 
-        vehicle.mode = dronekit.VehicleMode('GUIDED')
+        self.uav.mode = dronekit.VehicleMode('GUIDED')
 
         #cnt = 0
-        #while not vehicle.is_armable:
+        #while not self.uav.is_armable:
         #    self.log('Waiting until UAV is armable...')
         #    cnt += 1
         #    if cnt > UAV_TIMEOUT_PREARM:
@@ -165,30 +230,27 @@ class UAV(threading.Thread):
         #self.log('is armable')
 
         cnt = 0
-        while vehicle.gps_0.fix_type < 2:
+        while self.uav.gps_0.fix_type < 2:
             self.log('Waiting for UAV GPS...')
             cnt += 1
             #if cnt > TIMEOUT_GPS:
             #    self.log('UAV timeout gps'
             #    return False
 
-        self.log('GPS fix:', vehicle.gps_0.fix_type)
+        self.log('GPS fix:', self.uav.gps_0.fix_type)
         return True
 
 
     def arm(self):
         self.log('Arm')
-        vehicle = self.get_uav()
-        if not vehicle: return False
+        if not self._set_state(ARMED):
+            return False
 
-        if not self.prearm(): # prearm if not yet done
-            return
+        self.uav.mode = dronekit.VehicleMode('GUIDED') # ?
 
-        vehicle.mode = dronekit.VehicleMode('GUIDED') # ?
-
-        vehicle.armed = True
+        self.uav.armed = True
         cnt = 0
-        while not vehicle.armed:
+        while not self.uav.armed:
             self.log('Waiting until UAV is armed...')
             if cnt > UAV_TIMEOUT_ARM:
                 self.log('UAV timeout arm')
@@ -199,32 +261,32 @@ class UAV(threading.Thread):
         return True
 
 
+    def launch(self):
+        self.log('Launch')
+        if not self._set_state(LAUNCHED):
+            return False
+
+        uav.simple_takeoff(self.target.alt)
+        return True
+
+
     def land(self):
         self.log('Land')
-        vehicle = self.get_uav()
-        if not vehicle: return False
+        if not self._set_state(LANDED):
+            return False
 
-        vehicle.mode = dronekit.VehicleMode('LAND')
-        vehicle.flush()
+        self.uav.mode = dronekit.VehicleMode('LAND')
+        self.uav.flush()
         return True
 
 
     def disarm(self):
         self.log('Disarm')
-        vehicle = self.get_uav()
-        if not vehicle: return False
+        if not self._set_state(IDLE):
+            return False
 
-        vehicle.armed = False
-        vehicle.flush()
-        return True
-
-
-    def launch(self):
-        self.log('Launch')
-        vehicle = self.get_uav()
-        if not vehicle: return False
-
-        uav.simple_takeoff(self.target.alt)
+        self.uav.armed = False
+        self.uav.flush()
         return True
 
 
@@ -233,8 +295,9 @@ uav = UAV()
 
 def _vehicle2states(vehicle):
     if not vehicle:
-        return {}
-    return {
+        return None
+
+    states = {
         'version_major'             : vehicle.version.major,
         'version_patch'             : vehicle.version.patch,
         'version_release'           : vehicle.version.release,
@@ -260,3 +323,9 @@ def _vehicle2states(vehicle):
         'battery_level'             : vehicle.battery.current,
         'last_heartbeat'            : vehicle.last_heartbeat,
     }
+
+    class DictToObject:
+        def __init__(self, d):
+            self.__dict__ = d
+    return DictToObject(states)
+
