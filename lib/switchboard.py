@@ -25,7 +25,7 @@ class Board(SerialThread):
 
     def __init__(self, *args, **kwargs):
         super(Board, self).__init__(NAME, PORT, BAUD)
-        self.armed, self.pos = False, None
+        self.arm, self.pos = False, None
 
 
     def iluminate(self):
@@ -63,16 +63,15 @@ class Board(SerialThread):
         is_lat = True
         while 1:
             line = self.ser.readline().strip()
-            self.log(line)
             if not line:
                 continue
 
             try:
-                enable, offs, direction, armed, launch, abort = map(int, line.split(','))
+                enable, offs, direction, arm, launch, abort = map(int, line.split(','))
             except ValueError:
                 continue
-            armed, launch, abort = bool(armed), bool(launch), bool(abort)
-            self.log('enable', enable, 'offs', offs, 'direction', direction, 'armed', armed, 'launch', launch, 'abort', abort)
+            arm, launch, abort = bool(arm), bool(launch), bool(abort)
+            self.log('enable', enable, 'offs', offs, 'direction', direction, 'arm', arm, 'launch', launch, 'abort', abort)
 
 
             if not enable:
@@ -86,26 +85,24 @@ class Board(SerialThread):
                 is_lat = not is_lat
 
 
-            if armed and not self.armed:
-                print 'Arm'
-                uav.arm()
-
-            if not armed and self.armed:
-                print 'Disarm'
+            if arm and not self.arm:
+                if not self.pos:
+                    self.log('No target yet')
+                else:
+                    uav.set_target(self.pos) and uav.prearm() and uav.arm()
+            if not arm and self.arm:
                 uav.disarm()
- 
-            self.armed = armed
+            self.arm = arm
 
 
             if launch:
-                print 'Launch'
                 uav.launch()
             self.launch = launch
 
 
             if abort:
-                print 'Aboard'
-                uav.abort()
+                uav.land()
+                uav.disarm()
 
 
             self.ser.write("1,0,0,0\r")
@@ -114,6 +111,7 @@ class Board(SerialThread):
                 self.pos.lat += offs
             else:
                 self.pos.lon += offs
+
 
             self.notify()
 
