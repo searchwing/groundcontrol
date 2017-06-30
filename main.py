@@ -15,10 +15,10 @@ from lib.switchboard import board
 
 def show():
 
-    ui.init()
     gps.start()
     board.start()
     uav.start()
+    ui.init()
 
 
     last = None
