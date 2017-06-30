@@ -7,15 +7,6 @@ import os
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 
-
-
-"""Settings for DB
-"""
-DATABASE = os.path.join(BASEDIR, 'db.sqlite3')
-
-
-
-
 """ Settings for UAV
   Address
     USB to pixhawk: /dev/tty.usbmodem1
@@ -50,10 +41,10 @@ GPS_PORT = '/dev/ttyUSB0'
 GPS_BAUD = 4800
 
 
-"""Settings for rotary control
+"""Settings for switchboard
 """
-ROTARY_PORT = '/dev/ttyUSB1'
-ROTARY_BAUD = 115200
+BOARD_PORT = '/dev/ttyUSB1'
+BOARD_BAUD = 115200
 
 
 

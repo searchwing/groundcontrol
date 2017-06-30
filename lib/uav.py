@@ -42,11 +42,11 @@ def state(state):
                 return False
 
             if state == TARGETSET and not self.state == DISARMED:
-                self.error('Please first go into idle mode')
+                self.error('Please first disarm')
                 return False
 
             if state == PREARMED and not self.state == TARGETSET:
-                self.error('First please set target')
+                self.error('Please first set target')
                 return False
 
             if state == ARMED and not self.state == PREARMED:

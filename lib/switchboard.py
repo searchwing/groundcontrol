@@ -12,8 +12,8 @@ from . serialthread import SerialThread
 
 
 NAME = 'Board'
-PORT = ROTARY_PORT
-BAUD = ROTARY_BAUD
+PORT = BOARD_PORT
+BAUD = BOARD_BAUD
 
 
 
@@ -55,9 +55,9 @@ class Board(SerialThread):
             self.log('Looking for local position')
             self.pos = gps.get_position()
             if self.pos:
-                self.log('Got a local position')
+                self.log('Got a local position, start reading the board')
             else:
-                self.log('No local position')
+                self.log('No local position, waiting for a second')
                 time.sleep(1)
 
         is_lat = True
@@ -75,6 +75,7 @@ class Board(SerialThread):
 
 
             if not enable:
+                self.log('Locked. Please turn key.')
                 self.ser.write("0,2,0,0\r")
                 continue
 
