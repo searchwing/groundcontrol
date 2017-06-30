@@ -10,7 +10,7 @@ from . geo import Position
 from . settings import *
 
 
-IDLE      = 1
+DISARMED  = 1
 TARGETSET = 2
 PREARMED  = 3
 ARMED     = 4
@@ -18,16 +18,59 @@ LAUNCHED  = 5
 LANDED    = 6
 ABOART    = 7
 
-
-INT2STATE = {
-    1: 'IDLE',
-    2: 'TARGETSET', 
+INT2STATENAME = {
+    1: 'DISARMED',
+    2: 'TARGETSET',
     3: 'PREARMED',
     4: 'ARMED',
     5: 'LAUNCHED',
     6: 'LANDED',
     7: 'ABOART',
 }
+
+
+def state(state):
+    """Returns decorator for UAV state dependend functions.
+    Pass the state the function to be set by the function to decorate.
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            self.log('Going to state', INT2STATENAME[state])
+
+            if not self.get_uav():
+                return False
+
+            if state == TARGETSET and not self.state == DISARMED:
+                self.error('Please first go into idle mode')
+                return False
+
+            if state == PREARMED and not self.state == TARGETSET:
+                self.error('First please set target')
+                return False
+
+            if state == ARMED and not self.state == PREARMED:
+                self.error('Please first prearm')
+                return False
+
+            if state == LAUNCHED and not self.state == ARMED:
+                self.error('Please first arm')
+                return False
+
+            if state == LANDED and not self.state == LAUNCHED:
+                self.error('Not launched')
+                return False
+
+            if state == ABOART:
+                pass
+
+            ret = func(*args, **kwargs)
+            if ret:
+                self.state = state
+            return ret
+
+        return wrapper
+    return decorator
 
 
 
@@ -40,7 +83,7 @@ class UAV(threading.Thread):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.daemon = True
 
-        self.state = IDLE
+        self.state = DISARMED
 
         self.last_heartbeat = 0
         self.uav            = None
@@ -53,7 +96,7 @@ class UAV(threading.Thread):
         print 'UAV: %s' % msg
 
 
-    def log(self, *msg):
+    def error(self, *msg):
         msg = ' '.join((str(m) for m in msg))
         print 'UAV error: %s' % msg
 
@@ -143,79 +186,44 @@ class UAV(threading.Thread):
         states = self.get_states()
         if states:
             return Position(
-                lat = states.get('location_global_frame_lat'),
-                lon = states.get('location_global_frame_lon'),
-                alt = states.get('location_global_frame_alt'))
+                lat = states.location_global_frame_lat,
+                lon = states.location_global_frame_lon,
+                alt = states.location_global_frame_alt)
         return None
 
 
 
 
-    def _set_state(self, s):
-        self.log('Set state', INT2STATE(s))
-        
-        if not self.get_uav():
-            return
-
-        if s == TARGETSET:
-            self.error('Please first got into idle mode')
-            return False
-
-        if s == PREARMED and not self.state == TARGETSET:
-            self.error('First please set target')
-            return False
-
-        if s == ARMED and not self.state == PREARMED:
-            self.error('Please first prearm')
-            return False
-
-        if s == LAUNCHED and not self.state == ARMED:
-            self.error('Please first arm')
-            return False
-
-        if s == LAND and not self.state == LAUNCHED:
-            self.error('Not launched')
-            return False
-
-        if s == ABOART:
-            pass
-
-        self.state = s
-        return True
-
-
+    @state(TARGETSET)
     def set_target(self, pos):
-        self.log('Set target', pos)
-        if not self._set_state(TARGETSET):
-            return False
 
         self.target = pos
 
-        uav.commands.clear()
+        self.uav.commands.clear()
 
         cur = self.get_position()
         cmd = dronekit.Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
             0, 1, 0, 0, 0, 0, cur.lat, cur.lon, cur.alt)
-        uav.commands.add(cmd)
+        self.uav.commands.add(cmd)
 
         cmd = dronekit.Command(0, 0, 0,
            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
            0, 0, 0, 0, 0, 0,
            pos.lat, pos.lon, pos.alt)
-        uav.commands.add(cmd)
+        self.uav.commands.add(cmd)
 
-        uav.commands.upload()
+        self.uav.commands.upload()
+        return True
 
 
+    @state(PREARMED)
     def prearm(self):
         """UAV prearm check.
         """
         self.log('Prearm')
-        if not self._set_state(PREARMED):
-            return False
 
         self.uav.mode = dronekit.VehicleMode('GUIDED')
 
@@ -241,10 +249,9 @@ class UAV(threading.Thread):
         return True
 
 
+    @state(ARMED)
     def arm(self):
         self.log('Arm')
-        if not self._set_state(ARMED):
-            return False
 
         self.uav.mode = dronekit.VehicleMode('GUIDED') # ?
 
@@ -261,29 +268,26 @@ class UAV(threading.Thread):
         return True
 
 
+    @state(LAUNCHED)
     def launch(self):
         self.log('Launch')
-        if not self._set_state(LAUNCHED):
-            return False
 
-        uav.simple_takeoff(self.target.alt)
+        self.uav.simple_takeoff(self.target.alt)
         return True
 
 
+    @state(LANDED)
     def land(self):
         self.log('Land')
-        if not self._set_state(LANDED):
-            return False
 
         self.uav.mode = dronekit.VehicleMode('LAND')
         self.uav.flush()
         return True
 
 
+    @state(DISARMED)
     def disarm(self):
         self.log('Disarm')
-        if not self._set_state(IDLE):
-            return False
 
         self.uav.armed = False
         self.uav.flush()
