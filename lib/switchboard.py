@@ -48,12 +48,19 @@ class Board(SerialThread):
 
 
     def get_message(self):
-        return '%s: %s' % (self.state, self.msg or '')
+        return '(%s)\n%s' % (self.state, self.msg or '')
 
 
     def work(self):
         self.iluminate()
+        while 1:
+            try:
+                self._work()
+            except Exception, e:
+                print e
 
+
+    def _work(self):
         while 1:
             self.log('Looking for local position')
             self.pos = gps.get_position()
@@ -97,12 +104,12 @@ class Board(SerialThread):
 
             if step:
                 self.state = (self.state + 1) % 5
-                self.log('New self.state', self.state)
+                self.log('New state', self.state)
 
 
             if self.state == 1:
                 if arm:
-                    self.m('Please disarm,\nthen set latitude.')
+                    self.m('Please disarm.\nThen set latitude.')
                     to_disarm = True
                 else:
                     self.m('Set latitude.')
@@ -114,7 +121,7 @@ class Board(SerialThread):
 
             if self.state == 2:
                 if arm:
-                    self.m('Please disarm,\nthen set longitude.')
+                    self.m('Please disarm.\nThen set longitude.')
                     to_disarm = True
                 else:
                     self.m('Set longitude.')
@@ -126,7 +133,7 @@ class Board(SerialThread):
 
             if self.state == 3:
                 if not arm:
-                    self.m('Pleased arm,\nthen transmit target.')
+                    self.m('Please arm.\nThen transmit target.')
                     to_arm = True
                 else:
                     self.m('Transmit target.')
@@ -136,7 +143,7 @@ class Board(SerialThread):
 
             if self.state == 4:
                 if not arm:
-                    self.m('Pleased arm,\nthen launch.')
+                    self.m('Pleased arm.\nThen launch.')
                     to_arm = True
                 else:
                     self.m('Launch.')
@@ -147,7 +154,7 @@ class Board(SerialThread):
             elif abort:
                 if not arm:
                     to_arm = True
-                    self.m('Pleased arm,\nthen abort.')
+                    self.m('Pleased arm.\nThen abort.')
                 else:
                     uav.land()
 

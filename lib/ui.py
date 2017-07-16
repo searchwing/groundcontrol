@@ -108,7 +108,10 @@ def _run():
 
 
         _show(texts)
-        wait(1) # Wait a second or get notified
+
+        # Wait min 40ms, max 1000ms
+        pygame.time.delay(40)
+        wait(0.96) # Wait a second or get notified
 
 
 
