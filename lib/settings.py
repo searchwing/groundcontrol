@@ -11,7 +11,11 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
   Address
     USB to pixhawk: /dev/tty.usbmodem1
     USB Radio Telemetry Ground Module: /dev/tty.SLAB_USBtoUART
-    Simulator: tcp:127.0.0.1:5760
+    Simulator: udp:0.0.0.0:14550
+    Start simulation
+     dronekit-sitl plane-3.3.0 --home=<lat>,<lon>,<alt>,<yaw>
+     mavproxy.py --master=tcp:0.0.0.0:5760 --out=udp:<IP of GC>:14550 --map
+     Run GC on 'udp:0.0.0.0:14550'
   Baud
     Dronekit default is 115200
     USB: 115200 

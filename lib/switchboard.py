@@ -4,16 +4,12 @@ actuated by a rotary encoder on the switchboard.
 """
 import time
 
+import ui
 from . gps import gps
 from . uav import uav
 from . geo import Position
 from . settings import *
 from . serialthread import SerialThread
-
-
-NAME = 'Board'
-PORT = BOARD_PORT
-BAUD = BOARD_BAUD
 
 
 
@@ -24,13 +20,13 @@ class Board(SerialThread):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Board, self).__init__(NAME, PORT, BAUD)
-        self.arm, self.pos = False, None
+        super(Board, self).__init__('Board', BOARD_PORT, BOARD_BAUD)
+        self.msg = None
+        self.pos = None
+        self.state = 0
 
 
     def iluminate(self):
-        self.log('Iluminate')
-
         for code in (
                 '1,0,0,0',
                 '0,1,0,0',
@@ -46,75 +42,117 @@ class Board(SerialThread):
             time.sleep(0.2)
 
 
+    def m(self, msg):
+        self.msg = msg
+        self.log(self.msg)
+
+
+    def get_message(self):
+        return '%s: %s' % (self.state, self.msg or '')
+
+
     def work(self):
         self.iluminate()
 
         while 1:
-            if self.pos:
-                break
             self.log('Looking for local position')
             self.pos = gps.get_position()
+            ui.notify()
             if self.pos:
                 self.log('Got a local position, start reading the board')
-            else:
-                self.log('No local position, waiting for a second')
-                time.sleep(1)
+                break
+            time.sleep(1)
 
-        is_lat = True
+
+        self.state = 1
+        to_arm, to_disarm = False, False
         while 1:
+            self.notify()
+
             line = self.ser.readline().strip()
             if not line:
                 continue
 
             try:
-                enable, offs, direction, arm, launch, abort = map(int, line.split(','))
+                enable, offs, step, arm, trigger, abort = map(int, line.split(','))
             except ValueError:
                 continue
-            arm, launch, abort = bool(arm), bool(launch), bool(abort)
-            self.log('enable', enable, 'offs', offs, 'direction', direction, 'arm', arm, 'launch', launch, 'abort', abort)
+            arm, trigger, abort = bool(arm), bool(trigger), bool(abort)
+            #print 'enable', enable, 'offs', offs, 'step', step, 'arm', arm, 'trigger', trigger, 'abort', abort
 
 
             if not enable:
-                self.log('Locked. Please turn key.')
-                self.ser.write("0,2,0,0\r")
+                self.m('Locked. Please turn key.')
                 continue
 
 
-            if direction:
-                self.ser.write("2,0,0,0\r")
-                self.log('Go from %s' % ('lon to lat' if is_lat else 'lat to lon',))
-                is_lat = not is_lat
+            if to_arm and not arm:
+                self.log('Waiting for arm')
+                continue
+            elif to_disarm and arm:
+                self.log('Waiting for diarm')
+                continue
+            to_arm, to_disarm = False, False
 
 
-            if arm and not self.arm:
-                if not self.pos:
-                    self.log('No target yet')
+            if step:
+                self.state = (self.state + 1) % 5
+                self.log('New self.state', self.state)
+
+
+            if self.state == 1:
+                if arm:
+                    self.m('Please disarm,\nthen set latitude.')
+                    to_disarm = True
                 else:
-                    uav.set_target(self.pos) and uav.prearm() and uav.arm()
-            if not arm and self.arm:
-                uav.disarm()
-            self.arm = arm
+                    self.m('Set latitude.')
+                    if offs:
+                        self.ser.write("1,0,0,0\r")
+                        offs /= 1000000.0
+                        self.pos.lat += offs
 
 
-            if launch:
-                uav.launch()
-            self.launch = launch
+            if self.state == 2:
+                if arm:
+                    self.m('Please disarm,\nthen set longitude.')
+                    to_disarm = True
+                else:
+                    self.m('Set longitude.')
+                    if offs:
+                        self.ser.write("1,0,0,0\r")
+                        offs /= 1000000.0
+                        self.pos.lon += offs
 
 
-            if abort:
-                uav.land()
-                uav.disarm()
+            if self.state == 3:
+                if not arm:
+                    self.m('Pleased arm,\nthen transmit target.')
+                    to_arm = True
+                else:
+                    self.m('Transmit target.')
+                    if trigger:
+                        uav.set_target(self.pos)
 
 
-            self.ser.write("1,0,0,0\r")
-            offs /= 1000000.0
-            if is_lat:
-                self.pos.lat += offs
-            else:
-                self.pos.lon += offs
+            if self.state == 4:
+                if not arm:
+                    self.m('Pleased arm,\nthen launch.')
+                    to_arm = True
+                else:
+                    self.m('Launch.')
+                    if trigger:
+                        uav.launch()
 
 
-            self.notify()
+            elif abort:
+                if not arm:
+                    to_arm = True
+                    self.m('Pleased arm,\nthen abort.')
+                else:
+                    uav.land()
+
+
+            ui.notify()
 
 
     def get_position(self):
