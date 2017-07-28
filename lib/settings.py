@@ -47,8 +47,9 @@ GPS_BAUD = 4800
 
 """Settings for switchboard
 """
-BOARD_PORT = '/dev/ttyUSB1'
-BOARD_BAUD = 115200
+BOARD_PORT    = '/dev/ttyUSB1'
+BOARD_BAUD    = 115200
+BOARD_TIMEOUT = 2
 
 
 

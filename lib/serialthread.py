@@ -41,10 +41,10 @@ class SerialThread(threading.Thread):
             try:
                 if not self.ser:
                     self.log('Open', self.port, self.baud)
-                    self.ser = serial.Serial()
-                    self.ser.port     = self.port
-                    self.ser.baudrate = self.baud
-                    self.ser.timeout  = self.timeout
+                    self.ser = serial.Serial(
+                            port     = self.port,
+                            baudrate = self.baudrate,
+                            timeout  = self.timeout)
                     self.ser.open()
                     self.log('Is open')
 

@@ -118,6 +118,23 @@ class UAV(threading.Thread):
         return self.uav
 
 
+    def set(self, key, val):
+        self.log('Set %s: %s' % (key, val))
+
+        if not self.uav:
+            self.err('No UAV connected. Cant set')
+            return False
+        self.uav.parameters[key] = val
+        return True
+
+
+    def get_settings(self):
+        if not self.uav:
+            self.err('No UAV connected. Cant get settings')
+            return None
+        return self.uav.parameters
+
+
     def get_states(self):
         return _vehicle2states(self.uav)
 
@@ -144,11 +161,6 @@ class UAV(threading.Thread):
             self.err('No UAV connected. Cant set target')
             return False
 
-        if self.uav.armed:
-            self.disarm()
-
-        self.target = pos
-
         self.uav.commands.clear()
 
         cur = self.get_position()
@@ -166,20 +178,21 @@ class UAV(threading.Thread):
         self.uav.commands.add(cmd)
 
         self.uav.commands.upload()
+
+        self.target = pos
         return True
 
 
-    def prearm(self):
+    def get_target(self):
+        return self.target
+
+
+
+
+    def _prearm(self):
         """UAV prearm check.
         """
         self.log('Prearm')
-
-        if not self.uav:
-            self.err('No UAV connected. Cant prearm')
-            return False
-
-        if self.uav.armed:
-            self.disarm()
 
         self.uav.mode = dronekit.VehicleMode('GUIDED')
 
@@ -212,14 +225,9 @@ class UAV(threading.Thread):
             self.err('No UAV connected. Cant arm')
             return False
 
-        if self.uav.armed:
-            self.err('Already armed')
-            return False
-
-        if not self.uav.is_armable:
-            self.err('Not armable')
-            return False
-
+        if not self._prearm():
+            pass
+            #return False
 
         self.uav.mode = dronekit.VehicleMode('GUIDED') # ?
 
@@ -227,6 +235,7 @@ class UAV(threading.Thread):
         cnt = 0
         while not self.uav.armed:
             self.log('Waiting until UAV is armed...')
+            cnt += 1
             if cnt > UAV_TIMEOUT_ARM:
                 self.log('UAV timeout arm')
                 return False
@@ -243,13 +252,19 @@ class UAV(threading.Thread):
             self.err('No UAV connected. Cant disarm')
             return False
 
-        if not self.uav.armed:
-            self.err('Not armed. Dont disarm')
-            return False
-
         self.uav.armed = False
         self.uav.flush()
         return True
+
+
+    def is_armed(self):
+        if not self.uav:
+            self.err('No UAV connected. Dont know if armed.')
+            return False
+
+        return self.uav.armed
+
+
 
 
     def launch(self):
@@ -259,11 +274,14 @@ class UAV(threading.Thread):
             self.err('No UAV connected. Cant launch')
             return False
 
-        if not self.uav.armed:
-            self.arm()
+#        if not self.uav.armed:
+#            self.err('Not armed. Cant launch')
+#            self.arm()
 
         self.uav.simple_takeoff(self.target.alt)
         return True
+
+
 
 
     def land(self):
@@ -276,6 +294,8 @@ class UAV(threading.Thread):
         self.uav.mode = dronekit.VehicleMode('LAND')
         self.uav.flush()
         return True
+
+
 
 
     def return_to_launch(self):
