@@ -31,6 +31,16 @@ def state2str(state):
     )[state]
 
 
+LIGHT_1 = 1
+LIGHT_2 = 2
+LIGHT_3 = 3
+LIGHT_4 = 4
+
+LIGHT_OFF   = 0
+LIGHT_ON    = 1
+LIGHT_BLINK = 2
+
+
 
 
 class Board(SerialThread):
@@ -40,7 +50,8 @@ class Board(SerialThread):
 
     def __init__(self, *args, **kwargs):
         super(Board, self).__init__('Board', BOARD_PORT, BOARD_BAUD)
-        self.msg, self.pos, self.state = None, None, None
+        self.msg, self.pos = None, None
+        self.state = STATE_NO_STATE
 
 
     def iluminate(self):
@@ -54,25 +65,30 @@ class Board(SerialThread):
                 '2,2,1,0',
                 '2,2,2,1',
                 '2,2,2,2',
-                '1,1,1,1',):
+                '1,1,1,1',
+                '0,0,0,0'):
             self.ser.write('%s\r' % code)
             time.sleep(0.2)
+
+
+    def light_trigger(self, light, mode):
+        self.ser.write('0,0,%i,0\r' % mode
 
 
     def m(self, msg):
         if not msg == self.msg:
             self.msg = msg
-            ui.notify()
             self.log(self.msg)
 
 
     def get_message(self):
-        return '(%s)\n%s' % (state2str(self.state), self.msg or '')
+        #return '(%s)\n%s' % (state2str(self.state), self.msg or '')
+        return self.msg or ''
 
 
     def goto_state(self, state):
         self.state = state
-        self.log('Board: new state %s' % state2str(self.state)
+        self.log('Board: new state %s' % state2str(self.state))
 
 
     def work(self):
@@ -88,32 +104,38 @@ class Board(SerialThread):
         self.iluminate()
 
 
-        self.goto_state(STATE_WAIT_FOR_POS)
-        self.m('Looking for local position...')
+        if not self.pos:
+            self.goto_state(STATE_WAIT_FOR_POS)
+            self.m('Waiting for local position...')
+            ui.notify()
 
-        while 1:
-            self.pos = gps.get_position()
-            if self.pos:
-                break
+            while 1:
+                time.sleep(1)
+                self.pos = gps.get_position()
+                if self.pos:
+                    break
+            self.m('...found local position')
+            ui.notify()
             time.sleep(1)
-
-        self.goto_state(STATE_SET_LAT)
-        self.m('Found local position')
-
-
+            self.goto_state(STATE_SET_LAT)
 
 
         while 1:
+            ui.notify()
+
 
             if not uav.get_uav():
                 next_state = self.state
-                self.goto_state('STATE_WAIT_FOR_UAV')
+                self.goto_state(STATE_WAIT_FOR_UAV)
                 self.m('Waiting for UAV...')
 
                 while 1:
                     time.sleep(1)
                     if uav.get_uav():
                         break
+                self.m('...found UAV')
+                ui.notify()
+                time.slee(1)
                 self.goto_state(next_state)
 
                 uav.set('ARMING_CHECK',     9) # ?
@@ -135,7 +157,6 @@ class Board(SerialThread):
                 line = line.strip()
             if not line:
                 continue
-
             try:
                 unlock, offs, step, arm, trigger, abort = map(int, line.split(','))
             except ValueError:
@@ -148,7 +169,6 @@ class Board(SerialThread):
             if not unlock:
                 self.m('Locked.\nPlease turn key.')
                 continue
-
 
             if abort:
                 if not arm:
@@ -206,7 +226,7 @@ class Board(SerialThread):
                     trigger = None
                     self.m('Transmitting target...')
                     time.sleep(1)
-                    §
+
                     if uav.set_target(self.pos):
                         self.m('Target transmitted.')
                         self.goto_state('STATE_START_MOTORS')
@@ -268,5 +288,4 @@ class Board(SerialThread):
 
 
 board = Board()
-
 

@@ -45,8 +45,11 @@ class SerialThread(threading.Thread):
                             port     = self.port,
                             baudrate = self.baud,
                             timeout  = self.timeout)
-                    self.ser.open()
-                    self.log('Is open')
+                    if self.ser.isOpen():
+                        self.log('Already open')
+                    else:
+                        self.ser.open()
+                        self.log('Is open')
 
                 self.work()
 

@@ -131,7 +131,7 @@ class UAV(threading.Thread):
 
     def get_settings(self):
         if not self.uav:
-            self.err('No UAV connected. Cant get settings')
+            #self.err('No UAV connected. Cant get settings')
             return None
 
         return self.uav.parameters
@@ -147,7 +147,7 @@ class UAV(threading.Thread):
 
     def get_position(self):
         if not self.uav:
-            self.err('No UAV connected. Cant get position')
+            #self.err('No UAV connected. Cant get position')
             return None
 
         lat = self.uav.location.global_frame.lat

@@ -8,14 +8,14 @@ import pygame
 from . gps import gps
 from . uav import uav
 from . switchboard import board
+from . framebuffer import get as get_framebuffer
 
 
 FONTNAME = 'droidsansmono'
 FONTSIZE = 24
-SCREENSIZE = (480, 800)
 
 
-
+_screen, _font = None, None
 
 _condition = threading.Condition()
     
@@ -116,22 +116,23 @@ def _run():
 
 
 
-_screen, _font = None, None
-
-
 def start():
     """Start UI threat.
     """
     global _screen, _font
 
-    pygame.init()
-    #self._screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF)
-    _screen = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
+    #pygame.init()
+    #pygame.mouse.set_visible(0)
+    #_screen = pygame.display.set_mode((480, 800), pygame.HWSURFACE | pygame.DOUBLEBUF)
+
+    _screen = get_framebuffer()
     _font = pygame.font.SysFont(FONTNAME, FONTSIZE)
 
     thread = threading.Thread(target = _run)
     thread.daemon = True
     thread.start()
+
+
 
 
 def _show(text):
