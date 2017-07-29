@@ -124,6 +124,7 @@ class UAV(threading.Thread):
         if not self.uav:
             self.err('No UAV connected. Cant set')
             return False
+
         self.uav.parameters[key] = val
         return True
 
@@ -132,15 +133,21 @@ class UAV(threading.Thread):
         if not self.uav:
             self.err('No UAV connected. Cant get settings')
             return None
+
         return self.uav.parameters
 
 
     def get_states(self):
+        if not self.uav:
+            self.err('No UAV connected. Cant get settings')
+            return None
+
         return _vehicle2states(self.uav)
 
 
     def get_position(self):
         if not self.uav:
+            self.err('No UAV connected. Cant get position')
             return None
 
         lat = self.uav.location.global_frame.lat
@@ -265,8 +272,6 @@ class UAV(threading.Thread):
         return self.uav.armed
 
 
-
-
     def launch(self):
         self.log('Launch', self.target.alt)
 
@@ -282,8 +287,6 @@ class UAV(threading.Thread):
         return True
 
 
-
-
     def land(self):
         self.log('Land')
 
@@ -294,8 +297,6 @@ class UAV(threading.Thread):
         self.uav.mode = dronekit.VehicleMode('LAND')
         self.uav.flush()
         return True
-
-
 
 
     def return_to_launch(self):

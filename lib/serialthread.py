@@ -43,7 +43,7 @@ class SerialThread(threading.Thread):
                     self.log('Open', self.port, self.baud)
                     self.ser = serial.Serial(
                             port     = self.port,
-                            baudrate = self.baudrate,
+                            baudrate = self.baud,
                             timeout  = self.timeout)
                     self.ser.open()
                     self.log('Is open')

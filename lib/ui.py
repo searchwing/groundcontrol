@@ -125,6 +125,7 @@ def start():
     global _screen, _font
 
     pygame.init()
+    #self._screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF)
     _screen = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
     _font = pygame.font.SysFont(FONTNAME, FONTSIZE)
 
