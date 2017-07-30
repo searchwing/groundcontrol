@@ -156,7 +156,7 @@ class UAV(threading.Thread):
 
         if lat == None or lon == None or alt == None:
             return None
-        return Position( lat = lat, lon = lon, alt = alt)
+        return Position(lat = lat, lon = lon, alt = alt)
 
 
 
@@ -168,9 +168,13 @@ class UAV(threading.Thread):
             self.err('No UAV connected. Cant set target')
             return False
 
+        cur = self.get_position()
+        if not cur:
+            self.err('UAV without position. Cant set target')
+            return False
+
         self.uav.commands.clear()
 
-        cur = self.get_position()
         cmd = dronekit.Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,

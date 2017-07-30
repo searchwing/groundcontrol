@@ -4,6 +4,7 @@
 import time, traceback
 
 import ui
+import framebuffer as fb
 from . gps import gps
 from . uav import uav
 from . settings import *
@@ -17,6 +18,7 @@ STATE_SET_LAT      = 3
 STATE_SET_LON      = 4
 STATE_SET_TARGET   = 5
 STATE_START_MOTORS = 6
+STATE_LAUNCH       = 7
 
 
 def state2str(state):
@@ -31,14 +33,14 @@ def state2str(state):
     )[state]
 
 
-LIGHT_1 = 1
-LIGHT_2 = 2
-LIGHT_3 = 3
-LIGHT_4 = 4
+LIGHT_ONE   = 0
+LIGHT_TWO   = 1
+LIGHT_THREE = 2
+LIGHT_FOUR  = 3
 
-LIGHT_OFF   = 0
-LIGHT_ON    = 1
-LIGHT_BLINK = 2
+LIGHT_OFF   = '0'
+LIGHT_ON    = '1'
+LIGHT_BLINK = '2'
 
 
 
@@ -50,11 +52,12 @@ class Board(SerialThread):
 
     def __init__(self, *args, **kwargs):
         super(Board, self).__init__('Board', BOARD_PORT, BOARD_BAUD)
-        self.msg, self.pos = None, None
         self.state = STATE_NO_STATE
+        self.msg, self.pos = None, None
+        self.lightsList, self.lightsCode = [LIGHT_OFF, LIGHT_OFF, LIGHT_OFF, LIGHT_OFF,], None
 
 
-    def iluminate(self):
+    def ligthsInit(self):
         for code in (
                 '1,0,0,0',
                 '0,1,0,0',
@@ -71,15 +74,58 @@ class Board(SerialThread):
             time.sleep(0.2)
 
 
-    def light_trigger(self, light, mode):
-        self.ser.write('0,0,%i,0\r' % mode
+    def lights(self, lightsList = None):
+        if lightsList:
+            self.lightsList = lightsList
+        lightsCode = '%s\r' % ','.join(self.lightsList)
+        if not lightsCode == self.lightsCode:
+            self.lightsCode = lightsCode
+            self.ser.write(lightsCode)
+
+    def lightsOn(self):
+        self.lights([LIGHT_ON, LIGHT_ON, LIGHT_ON, LIGHT_ON,])
+
+    def lightsOff(self):
+        self.lights([LIGHT_OFF, LIGHT_OFF, LIGHT_OFF, LIGHT_OFF,])
+
+    def lightsSignal(self):
+        self.lightsOn()
+        time.sleep(1)
+        self.lightsOff()
+
+    def lightsBlink(self):
+        self.lights([LIGHT_BLINK, LIGHT_BLINK, LIGHT_BLINK, LIGHT_BLINK,])
+
+    def light(self, idx, mode):
+        self.lightsList[idx] = '%s' % mode
+        self.lights()
+
+    def lightsTest(self):
+        self.lightsOff()
+        time.sleep(1)
+        self.light(LIGHT_ONE,   LIGHT_ON)
+        time.sleep(1)
+        self.lightsOff()
+        time.sleep(1)
+        self.light(LIGHT_TWO,   LIGHT_ON)
+        time.sleep(1)
+        self.lightsOff()
+        time.sleep(1)
+        self.light(LIGHT_THREE, LIGHT_ON)
+        time.sleep(1)
+        self.lightsOff()
+        time.sleep(1)
+        self.light(LIGHT_FOUR,  LIGHT_ON)
+        time.sleep(1)
+        self.lightsOff()
+        time.sleep(1)
 
 
     def m(self, msg):
         if not msg == self.msg:
             self.msg = msg
             self.log(self.msg)
-
+            ui.notify()
 
     def get_message(self):
         #return '(%s)\n%s' % (state2str(self.state), self.msg or '')
@@ -92,51 +138,63 @@ class Board(SerialThread):
 
 
     def work(self):
+
         while 1:
             try:
                 self._work()
             except Exception, e:
                 print e
                 traceback.print_exc()
+                time.sleep(1)
+
+
 
 
     def _work(self):
-        self.iluminate()
+        ui.clear()
+        self.ligthsInit()
 
 
+
+        self.pos = gps.get_position()
         if not self.pos:
             self.goto_state(STATE_WAIT_FOR_POS)
             self.m('Waiting for local position...')
-            ui.notify()
+            self.lightsSignal()
 
             while 1:
-                time.sleep(1)
                 self.pos = gps.get_position()
                 if self.pos:
                     break
-            self.m('...found local position')
-            ui.notify()
-            time.sleep(1)
-            self.goto_state(STATE_SET_LAT)
+                time.sleep(1)
+
+            self.m('...Found local position')
+            self.lightsSignal()
+
+
+        self.goto_state(STATE_NO_STATE)
 
 
         while 1:
             ui.notify()
 
-
             if not uav.get_uav():
-                next_state = self.state
                 self.goto_state(STATE_WAIT_FOR_UAV)
                 self.m('Waiting for UAV...')
+                self.lightsSignal()
 
                 while 1:
-                    time.sleep(1)
                     if uav.get_uav():
                         break
-                self.m('...found UAV')
-                ui.notify()
-                time.slee(1)
-                self.goto_state(next_state)
+                    time.sleep(1)
+
+                self.m('...Found UAV')
+                self.lightsSignal()
+
+                self.goto_state(STATE_SET_LAT)
+                self.m('Now start flight preparations.')
+                time.sleep(1)
+                self.m('Set latitude.')
 
                 uav.set('ARMING_CHECK',     9) # ?
                 uav.set('BRD_SAFETYENABLE', 0) # ?
@@ -158,10 +216,10 @@ class Board(SerialThread):
             if not line:
                 continue
             try:
-                unlock, offs, step, arm, trigger, abort = map(int, line.split(','))
+                unlock, offs, left, arm, right, abort = map(int, line.split(','))
             except ValueError:
                 continue
-            arm, trigger, abort = bool(arm), bool(trigger), bool(abort)
+            arm, right, abort = bool(arm), bool(right), bool(abort)
 
 
 
@@ -190,8 +248,8 @@ class Board(SerialThread):
                 else:
                     self.m('Set latitude.')
 
-                    if step:
-                        step = None
+                    if left:
+                        left = None
                         self.goto_state(STATE_SET_LON)
 
                     elif offs:
@@ -206,8 +264,8 @@ class Board(SerialThread):
                 else:
                     self.m('Set longitude.')
 
-                    if step:
-                        step = None
+                    if left:
+                        left = None
                         self.goto_state(STATE_SET_TARGET)
 
                     elif offs:
@@ -222,14 +280,14 @@ class Board(SerialThread):
                 if not arm:
                     self.m('Please arm.\nThen transmit target.')
 
-                elif trigger:
-                    trigger = None
+                elif right:
+                    right = None
                     self.m('Transmitting target...')
                     time.sleep(1)
 
                     if uav.set_target(self.pos):
                         self.m('Target transmitted.')
-                        self.goto_state('STATE_START_MOTORS')
+                        self.goto_state(STATE_START_MOTORS)
                     else:
                         self.m('Failed to transmit target.')
 
@@ -241,8 +299,8 @@ class Board(SerialThread):
                 if not arm:
                     self.m('Please arm.\nThen start motors.')
 
-                elif trigger:
-                    trigger = None
+                elif right:
+                    right = None
                     self.m('Starting motors...')
                     time.sleep(1)
 
@@ -260,8 +318,8 @@ class Board(SerialThread):
                 if not arm:
                     self.m('Please arm.\nThen launch.')
 
-                elif trigger:
-                    trigger = None
+                elif right:
+                    right = None
                     self.m('Launching...')
                     time.sleep(1)
 

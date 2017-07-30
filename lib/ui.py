@@ -5,20 +5,20 @@ On notify rewrite display.
 import threading, collections
 import pygame
 
+import framebuffer 
 from . gps import gps
 from . uav import uav
 from . switchboard import board
-from . framebuffer import get as get_framebuffer
 
 
+CLEAR_COLOR = (255, 255, 255)
 FONTNAME = 'droidsansmono'
 FONTSIZE = 24
 
 
 _screen, _font = None, None
-
 _condition = threading.Condition()
-    
+
 
 def wait(timeout = None):
     """Wait until UI gets notified.
@@ -41,15 +41,12 @@ def notify():
     _condition.release()
 
 
-
-
 def _run():
     """Internal.
     The UI thread.
     """
     while 1:
         texts = []
-
         texts.append('%s UTC\n' % gps.dt if gps.dt else '......\n')
 
 
@@ -73,7 +70,6 @@ def _run():
  Longitude
  Altitude
 """
-
         texts.append(text)
 
 
@@ -98,7 +94,6 @@ def _run():
  Longitude
  Distance
 """
-
         texts.append(text)
 
 
@@ -121,18 +116,20 @@ def start():
     """
     global _screen, _font
 
-    #pygame.init()
-    #pygame.mouse.set_visible(0)
-    #_screen = pygame.display.set_mode((480, 800), pygame.HWSURFACE | pygame.DOUBLEBUF)
-
-    _screen = get_framebuffer()
+    _screen = framebuffer.get()
     _font = pygame.font.SysFont(FONTNAME, FONTSIZE)
+    clear()
 
     thread = threading.Thread(target = _run)
     thread.daemon = True
     thread.start()
 
 
+def clear():
+    global _screen, _font
+
+    _screen.fill(CLEAR_COLOR)
+    pygame.display.update()
 
 
 def _show(text):

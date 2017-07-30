@@ -14,10 +14,10 @@ from lib.switchboard import board
     
 
 if __name__ == '__main__':
-    gps.start()
-    board.start()
-    uav.start()
     ui.start()
+    gps.start()
+    uav.start()
+    board.start()
 
     try:
         while 1:
