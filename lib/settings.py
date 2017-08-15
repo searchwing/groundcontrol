@@ -39,18 +39,27 @@ UAV_TIMEOUT_ARM             = 10
 UAV_TIMEOUT_GPS             = 10
 
 
+# In /etc/udev/rules.d/99-usbserial.rules
+# add
+# ACTION=="add",ENV{ID_BUS}=="usb",ENV{ID_SERIAL_SHORT}=="XXX",SYMLINK+="ttyBoard"
+# ACTION=="add",ENV{ID_BUS}=="usb",ENV{ID_SERIAL_SHORT}=="YYY",SYMLINK+="ttyGPS"
+# Replace XXX with result of
+# sudo udevadm info --query=property --name=/dev/ttyUSB0 | grep ID_SERIAL_SHORT
+# and YYY with result of
+# sudo udevadm info --query=property --name=/dev/ttyUSB1 | grep ID_SERIAL_SHORT
+
+
 """ Settings for local GPS
 """
-GPS_PORT = '/dev/ttyUSB0'
+GPS_PORT = '/dev/ttyGPS'
 GPS_BAUD = 4800
 
 
 """Settings for switchboard
 """
-BOARD_PORT    = '/dev/ttyUSB1'
+BOARD_PORT    = '/dev/ttyBoard'
 BOARD_BAUD    = 115200
 BOARD_TIMEOUT = 2
-
 
 
 
