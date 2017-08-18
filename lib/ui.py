@@ -57,7 +57,7 @@ def _run():
 
         if upos:
             text = \
- """Current Position
+ """UAV Current Position
  Latitude  %3.5f
  Longitude %3.5f
  Altitude  %7im
@@ -65,7 +65,7 @@ def _run():
     
         else:
             text = \
-"""Current Position
+"""UAV Current Position
  Latitude
  Longitude
  Altitude
@@ -81,7 +81,7 @@ def _run():
                 dist = ''
 
             text = \
-"""Target Position
+"""UAV Target Position
  Latitude  %3.5f
  Longitude %3.5f
  Distance  %s
@@ -89,7 +89,7 @@ def _run():
 
         else:
             text = \
-"""Target Position
+"""UAV Target Position
  Latitude
  Longitude
  Distance
