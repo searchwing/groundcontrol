@@ -5,19 +5,17 @@ On notify rewrite display.
 import threading, collections
 import pygame
 
-import framebuffer 
 from . gps import gps
 from . uav import uav
+from . settings import *
 from . switchboard import board
-
-
-CLEAR_COLOR = (255, 255, 255)
-FONTNAME = 'droidsansmono'
-FONTSIZE = 24
+from . framebuffer import get as get_framebuffer
 
 
 _screen, _font = None, None
 _condition = threading.Condition()
+
+
 
 
 def wait(timeout = None):
@@ -31,6 +29,8 @@ def wait(timeout = None):
     _condition.release()
 
 
+
+
 def notify():
     """Notify UI to rewrite display.
     """
@@ -39,6 +39,8 @@ def notify():
     _condition.acquire()
     _condition.notifyAll()
     _condition.release()
+
+
 
 
 def _run():
@@ -104,9 +106,11 @@ def _run():
 
         _show(texts)
 
-        # Wait min 40ms, max 1000ms
+        # Wait max 1 second
+        # For 25fps mandatory wait for 40ms
         pygame.time.delay(40)
-        wait(0.96) # Wait a second or get notified
+        # Wait max 0.96 seconds for getting notified
+        wait(0.96)
 
 
 
@@ -116,7 +120,7 @@ def start():
     """
     global _screen, _font
 
-    _screen = framebuffer.get()
+    _screen = get_framebuffer()
     _font = pygame.font.SysFont(FONTNAME, FONTSIZE)
     clear()
 
@@ -125,11 +129,17 @@ def start():
     thread.start()
 
 
+
+
 def clear():
+    """Clear screen.
+    """
     global _screen, _font
 
     _screen.fill(CLEAR_COLOR)
     pygame.display.update()
+
+
 
 
 def _show(text):

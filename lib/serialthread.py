@@ -21,7 +21,6 @@ class SerialThread(threading.Thread):
     def log(self, *msg):
         msg = ' '.join((str(m) for m in msg))
         print '%s: %s' % (self.name, msg,)
-
         
 
     def wait(self, timeout = None):

@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Get pygame framebuffer device.
+"""Frame buffer stuff.
 """
 import os
 import pygame
 
 
+
     
 def get():
-    #pygame.init()
-    #pygame.display.init()
-    #pygame.font.init()
-    #return pygame.display.set_mode((480, 800), pygame.HWSURFACE | pygame.DOUBLEBUF)
-
+    """Get pygame compatible framebuffer device.
+    """
 
     disp_no = os.getenv("DISPLAY")
     if disp_no:
@@ -44,11 +42,10 @@ def get():
 
 
 def test():
+    """Test framebuffer, fill it with red, wait for 5 seconds.
+    """
     import time
     get().fill((255,0,0))
     pygame.display.update()
     time.sleep(5)
-
-if __name__ == '__main__':
-    test()
 

@@ -7,6 +7,11 @@ import os
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 
+CLEAR_COLOR = (255, 255, 255)
+FONTNAME    = 'droidsansmono'
+FONTSIZE    = 24
+
+
 """ Settings for UAV
   Address
     USB to pixhawk: /dev/tty.usbmodem1
