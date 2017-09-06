@@ -5,19 +5,17 @@
 Inspired by https://dev.px4.io/en/dronekit/example.html
 
 Works with pixracer, mavesp8266 and dronekit installed from its GIT repo:
-    git clone https://github.com/dronekit/dronekit-python.git
-    cd dronekit-python
-    pip install -e .
+    pip install git+https://github.com/dronekit/dronekit-python
 
-To bring the mavesp8266 wifi into client mode:
+To bring the pixracer esp8266 with mavesp8266 wifi into client mode:
 call http://192.168.4.1/setparameters?mode=1&ssidsta=<ssid>&pwdsta=<password>
 To bring the mavesp8266 wifi back into AP mode:
-call http://192.168.4.1/setparameters?mode=1&ssid=<ssid>&pwd=<password>
+call http://192.168.4.1/setparameters?mode=0&ssid=<ssid>&pwd=<password>
 """
 import os
 
-# Activate virtualenv in user homedir.
-# You might not need this.
+# Activate virtualenv in current user homedir.
+#  (if you work in a python virtualenv)
 activate_this = '%s/venv/bin/activate_this.py' % os.path.expanduser('~')
 execfile(activate_this, dict(__file__=activate_this))
 
@@ -31,7 +29,10 @@ BAUD              = 57600
 TIMEOUT_HEARTBEAT = 30
 REFRESH_RATE      = 4
 
-MAV_MODE_AUTO = 4 # https://github.com/PX4/Firmware/blob/master/Tools/mavlink_px4.py
+# https://github.com/PX4/Firmware/blob/master/Tools/mavlink_px4.py
+MAV_MODE_AUTO      =  4
+MAV_MODE_STABILIZE = 16
+MAV_MODE_MANUAL    = 64
 
 
 connection_string = 'udp:0.0.0.0:14550'
@@ -44,21 +45,39 @@ if args.connect:
 
 
 
-def px4_setMode(mavMode):
-    global vehicle
-    vehicle._master.mav.command_long_send(
-        vehicle._master.target_system, vehicle._master.target_component,
-        mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavMode, 0, 0, 0, 0, 0, 0)
+def get_distance_metres(aLocation1, aLocation2):
+    """
+    Returns the ground distance in metres between two LocationGlobal objects.
+
+    This method is an approximation, and will not be accurate over large distances and close to the 
+    earth's poles. It comes from the ArduPilot test code: 
+    https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
+    """
+    dlat = aLocation2.lat - aLocation1.lat
+    dlong = aLocation2.lon - aLocation1.lon
+    return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
 
 
-def clear_mission():
+
+
+def distance_to_current_waypoint():
+    """Gets distance in metres to the current waypoint. 
+    It returns None for the first waypoint (Home location).
+    """
     global vehicle
-    cmds = vehicle.commands
-    print 'Clearing %s commands' % cmds.count
-    if cmds.count:
-        cmds.clear()
-        cmds.upload()
-    return cmds
+
+    nextwaypoint = vehicle.commands.next
+    if nextwaypoint == 0:
+        return None
+    missionitem=vehicle.commands[nextwaypoint-1]
+    lat = missionitem.x
+    lon = missionitem.y
+    alt = missionitem.z
+    targetWaypointLocation = LocationGlobalRelative(lat, lon, alt)
+    distancetopoint = get_distance_metres(vehicle.location.global_frame, targetWaypointLocation)
+    return distancetopoint
+
+
 
 
 def get_location_offset_meters(original_location, dNorth, dEast, alt):
@@ -84,7 +103,111 @@ def get_location_offset_meters(original_location, dNorth, dEast, alt):
 
 
 
-def fly():
+def px4_setMode(mavMode):
+    global vehicle
+
+    print vehicle._master.mode_mapping()
+
+    vehicle._master.mav.command_long_send(
+        vehicle._master.target_system, vehicle._master.target_component,
+        mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavMode, 0, 0, 0, 0, 0, 0)
+
+
+
+
+def vehicle_reset():
+    """Disarm,
+    Go into STABILIZED mode
+    Clear any eventual mission
+    global vehicle
+    """
+    # Disarm, Should we wait here?
+    print 'Disarm'
+    vehicle.armed = False
+
+    # Go into default mode. Do we need this?
+    mode = 'MANUAL'
+    if not vehicle.mode.name == mode:
+        print 'Going into mav mode', mode
+        vehicle.mode = VehicleMode(mode)
+        while not vehicle.mode.name == mode:
+            time.sleep(1)
+    print 'Mav mode is', mode
+
+    # Clear mission, if any
+    cmds = vehicle.commands
+    if cmds.count:
+        print 'Clearing mission of %s commands' % cmds.count
+        cmds.clear()
+        cmds.upload()
+    else:
+        print 'No mission to clear'
+
+
+
+
+def mission_loiter():
+    global vehicle, home
+
+    cmds = vehicle.commands
+    cmds.clear()
+
+    home = vehicle.location.global_relative_frame
+    alt = 3 # meter
+    #turns, radius = 10, 10
+    hover_for = 0 # seconds
+
+    # Takeoff to alt meters
+    cmd = Command(0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            0, 1,
+            0, 0, 0, 0,
+            home.lat, home.lon, alt)
+    cmds.add(cmd)
+
+    # Loiter
+#    cmd = Command(0, 0, 0,
+#            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_LOITER_TURNS,
+#            0, 0,
+#            turns, 0, radius, 0,
+#            home.lat, home.lon, alt)
+#    cmds.add(cmd)
+#    cmd = Command(0, 0, 0,
+#            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+#            0, 1,
+#            hover_for, 0, 0, 0,
+#            home.lat, home.lon, alt)
+#    cmds.add(cmd)
+
+    cmd = Command(0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+            0, 1,
+            0, 0, 0, 0,
+            home.lat, home.lon, home.alt)
+    cmds.add(cmd)
+
+    # RTL
+#    cmd = Command(0, 0, 0,
+#            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+#            0, 1,
+#            0, 0, 0, 0,
+#            0, 0, 0)
+#    cmds.add(cmd)
+
+    # Land
+    cmd = Command(0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_LAND,
+            0, 1,
+            0, 0, 0, 0,
+            home.lat, home.lon, alt)
+    cmds.add(cmd)
+
+    return cmds
+
+
+
+
+def mission_rect():
     global vehicle
 
     cmds = vehicle.commands
@@ -97,7 +220,8 @@ def fly():
     wp = get_location_offset_meters(home, 0, 0, alt)
     cmd = Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-            0, 1, 0, 0, 0, 0,
+            0, 1,
+            0, 0, 0, 0,
             wp.lat, wp.lon, wp.alt)
     cmds.add(cmd)
 
@@ -105,7 +229,8 @@ def fly():
     wp = get_location_offset_meters(wp, step, 0, 0)
     cmd = Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            0, 1, 0, 0, 0, 0,
+            0, 1,
+            0, 0, 0, 0,
             wp.lat, wp.lon, wp.alt)
     cmds.add(cmd)
 
@@ -113,7 +238,8 @@ def fly():
     wp = get_location_offset_meters(wp, 0, step, 0)
     cmd = Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            0, 1, 0, 0, 0, 0,
+            0, 1,
+            0, 0, 0, 0,
             wp.lat, wp.lon, wp.alt)
     cmds.add(cmd)
 
@@ -121,7 +247,8 @@ def fly():
     wp = get_location_offset_meters(wp, -step, 0, 0)
     cmd = Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            0, 1, 0, 0, 0, 0,
+            0, 1,
+            0, 0, 0, 0,
             wp.lat, wp.lon, wp.alt)
     cmds.add(cmd)
 
@@ -129,17 +256,19 @@ def fly():
     wp = get_location_offset_meters(wp, 0, -step, 0)
     cmd = Command(0, 0, 0,
             mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            0, 1, 0, 0, 0, 0,
+            0, 1,
+            0, 0, 0, 0,
             wp.lat, wp.lon, wp.alt)
     cmds.add(cmd)
 
-    # Land
-    wp = get_location_offset_meters(home, 0, 0, 0)
-    cmd = Command(0, 0, 0,
-            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_LAND,
-            0, 1, 0, 0, 0, 0,
-            wp.lat, wp.lon, wp.alt)
-    cmds.add(cmd)
+    print cmds
+    return cmds
+
+
+
+
+def fly(cmds, monitor = True):
+
 
     # Upload mission
     print 'Uploading commands'
@@ -155,26 +284,25 @@ def fly():
     vehicle.armed = True
 #    while not vehicle.armed:
 #        time.sleep(1)
+    print 'Armed'
 
-    # Monitor mission execution
-    print 'Starting mission'
-    nextwaypoint = vehicle.commands.next
-    while nextwaypoint < len(vehicle.commands):
-        if vehicle.commands.next > nextwaypoint:
-            display_seq = vehicle.commands.next + 1
-            print 'Moving to waypoint %s' % display_seq
-            nextwaypoint = vehicle.commands.next
-        time.sleep(1)
+    if monitor:
+        # Monitor mission execution
+        print 'Starting mission'
+        nextwaypoint = vehicle.commands.next
+        while nextwaypoint < len(vehicle.commands):
+            if vehicle.commands.next > nextwaypoint:
+                display_seq = vehicle.commands.next + 1
+                print 'Moving to waypoint %s' % display_seq
+                nextwaypoint = vehicle.commands.next
+            time.sleep(1)
 
-    # Wait for landed
-    print 'Waiting for land'
-    while vehicle.commands.next > 0:
-        time.sleep(1)
-    print 'Landed'
+        # Wait for landed
+        print 'Waiting for land'
+        while vehicle.commands.next > 0:
+            time.sleep(1)
+        print 'Landed'
 
-    # Disarm vehicle
-    print 'Disarming'
-    vehicle.armed = False
 
 
 
@@ -186,17 +314,11 @@ try:
             baud              = BAUD,
             rate              = REFRESH_RATE,
             heartbeat_timeout = TIMEOUT_HEARTBEAT,
-            wait_ready         = ['system_status',])
-    vehicle.armed = False
+            wait_ready        = ['system_status',])
+    print 'Connected'
 
-    # Go into STABILIZED mode. Do we need this?
-    print 'Going into vehicle mode STABILIZED'
-    vehicle.mode = VehicleMode('STABILIZED')
-    while not vehicle.mode.name == 'STABILIZED':
-        time.sleep(1)
-
-    # Clear any eventual previous mission
-    clear_mission()
+    # Reset
+    vehicle_reset()
 
     # We need an home position
     print 'Waiting for home position'
@@ -207,7 +329,7 @@ try:
         home_position_set = True
     while not home_position_set:
         time.sleep(1)
-
+    print 'Got a home position'
 
     print
     print 'Status:              %s' % vehicle.system_status.state
@@ -222,21 +344,24 @@ try:
     #print 'EKF ok:              %s' % vehicle.ekf_ok
     print
 
+    # Lets see any message
+#    @vehicle.on_message('*')
+#    def listener(self, name, message):
+#        print 'MESSAGE:', name
 
-    px4_setMode(MAV_MODE_AUTO)
-    fly()
+    cmds = mission_loiter()
+    px4_setMode(MAV_MODE_AUTO) # ?
+    fly(cmds, True)
+
 
 except KeyboardInterrupt:
-    pass
-#except Exception, e:
-#    print e
+    print
 finally:
     print 'Finishing'
     if vehicle:
-        print 'Disarming vehicle'
-        vehicle.armed = False
-        clear_mission()
+        vehicle_reset()
         print 'Closing vehicle'
         vehicle.close()
+        vehicle = None
 print 'Bye'
 
