@@ -20,9 +20,12 @@ activate_this = '%s/venv/bin/activate_this.py' % os.path.expanduser('~')
 execfile(activate_this, dict(__file__=activate_this))
 
 import time, sys, argparse, math, socket, exceptions
+
 import dronekit
-from dronekit import connect, Command, LocationGlobal, VehicleMode
+from dronekit import Command, LocationGlobal, VehicleMode
 from pymavlink import mavutil
+
+
 
 
 BAUD              = 57600
@@ -38,6 +41,8 @@ MAV_MODE_MANUAL    = 64
 
 
 def log(*args):
+    """Logging for the poor.
+    """
     if args:
         for arg in args:
             print str(arg),
@@ -120,7 +125,7 @@ def vehicle_connect(connection_string):
     try:
         # Connect, don't wait until its ready
         log('Connecting %s' % connection_string)
-        vehicle = connect(
+        vehicle = dronekit.connect(
                 connection_string,
                 baud              = BAUD,
                 rate              = REFRESH_RATE,
