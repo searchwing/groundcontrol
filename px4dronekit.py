@@ -100,7 +100,7 @@ def get_location_offset_meters(original_location, dNorth, dEast, alt):
 
 
 
-def px4_setMode(mavMode):
+def _px4_setMode(mavMode):
     global vehicle
 
     #log(vehicle._master.mode_mapping())
@@ -130,7 +130,7 @@ def vehicle_connect(connection_string):
 
         # Reset as early as possible before it messes with
         # any residues
-        vehicle_reset()
+        _vehicle_reset()
 
         # Now we can wait until its ready
         log('Initialize')
@@ -159,6 +159,11 @@ def vehicle_close():
     global vehicle
 
     try:
+        _vehicle_reset()
+    except Exception, e:
+        log('Error on reset', e)
+
+    try:
         log('Closing')
         vehicle.close()
         log('Closed')
@@ -168,7 +173,7 @@ def vehicle_close():
         vehicle = None
 
 
-def vehicle_reset():
+def _vehicle_reset():
     """Disarm,
     Go into STABILIZED mode,
     Clear any eventual mission.
@@ -181,7 +186,7 @@ def vehicle_reset():
     log('Disarmed')
 
     # Go into stabilized mode
-    vehicle_mode('STABILIZED')
+    _vehicle_mode('STABILIZED')
 
     # Clear mission
     log('Clear mission')
@@ -191,7 +196,7 @@ def vehicle_reset():
     log('Mission cleared')
 
 
-def vehicle_mode(mode):
+def _vehicle_mode(mode):
     """Switch vehicle mode.
     """
     log('Going into mode', mode)
@@ -316,16 +321,10 @@ def vehicle_fly(monitor):
     global vehicle
 
     #log('Going into AUTO mode')
-    #px4_setMode(MAV_MODE_AUTO) # ?
+    #_px4_setMode(MAV_MODE_AUTO) # ?
 
     # Go into mission mode
-    mode = 'MISSION'
-    log('Going into mode', mode)
-    vehicle.mode = VehicleMode(mode)
-    while not vehicle.mode.name == mode:
-        log('Mode is', vehicle.mode.name)
-        time.sleep(1)
-    log('Mode is', vehicle.mode.name)
+    _vehicle_mode('MISSION')
 
     if monitor:
         # Monitor location
@@ -388,20 +387,21 @@ def main():
 
         # Build and upload a mission
         vehicle_mission()
+
         # Arm
         vehicle_arm()
+
         # For demo purposes
         time.sleep(2)
 
         # Actually fly the mission
-        #vehicle_fly(monitor = True)
+        vehicle_fly(monitor = True)
 
     except KeyboardInterrupt:
         print
     finally:
         # Kill the vehicle
         if vehicle:
-            vehicle_reset()
             vehicle_close()
         else:
             log('No vehicle to kill')
