@@ -1,31 +1,43 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @author: sascha@searchwing.org, August 2017
-"""Test dronekit with pixracer.
+"""Test python dronekit: take off, fly a rectangle, land.
 
-Works with pixracer, mavesp8266 and dronekit installed from its GIT repo:
+With pixracer, mavesp8266 on an esp01 and dronekit installed from its GIT repo
     pip install git+https://github.com/dronekit/dronekit-python
-Might work with other mavlink stacks.
+Might work with other mavlink stacks as well.
 
-To bring the pixracer esp8266 with mavesp8266 wifi into client mode:
-call http://192.168.4.1/setparameters?mode=1&ssidsta=<ssid>&pwdsta=<password>
-To bring the mavesp8266 wifi back into AP mode:
-call http://192.168.4.1/setparameters?mode=0&ssid=<ssid>&pwd=<password>
+Get a pre build mavesp8266 binary
+    http://www.grubba.com/mavesp8266/firmware-1.1.1.bin
+Or build it yourself
+    with platformIO - no external OS dependencies
+    https://github.com/dogmaphobic/mavesp8266
+
+To flash an esp8266 (with the mavesp8266 binary)
+    esptool.py --baud 921600 --port <your_serial_port> write_flash 0x00000 <the_binary>
+
+To bring the mavesp8266 wifi into client mode
+    http://192.168.4.1/setparameters?mode=1&ssidsta=<ssid>&pwdsta=<password>
+
+To bring the mavesp8266 wifi back into AP mode
+    call http://192.168.4.1/setparameters?mode=0&ssid=<ssid>&pwd=<password>
+
+If an esp8266 in client mode fails to connect an AP it falls back into the default
+AP mode with ssid 'PixRacer' and password 'pixracer'.
 """
 import os
 
-# Activate virtualenv in current user homedir.
-#  (if you work in a python virtualenv)
-activate_this = '%s/venv/bin/activate_this.py' % os.path.expanduser('~')
-execfile(activate_this, dict(__file__=activate_this))
+# Activate python virtualenv in current user homedir.
+#  (If you work in virtualenv, in ~/venv)
+if __name__ == '__main__':
+    activate_this = '%s/venv/bin/activate_this.py' % os.path.expanduser('~')
+    execfile(activate_this, dict(__file__=activate_this))
 
 import time, sys, argparse, math, socket, exceptions
 
 import dronekit
 from dronekit import Command, LocationGlobal, VehicleMode
 from pymavlink import mavutil
-
-
 
 
 BAUD              = 57600
@@ -38,11 +50,10 @@ MAV_MODE_STABILIZE = 16
 MAV_MODE_MANUAL    = 64
 
 
-
-
 def log(*args):
     """Logging for the poor.
     """
+    print ':::',
     if args:
         for arg in args:
             print str(arg),
@@ -124,7 +135,7 @@ def vehicle_connect(connection_string):
 
     try:
         # Connect, don't wait until its ready
-        log('Connecting %s' % connection_string)
+        log('Connect %s' % connection_string)
         vehicle = dronekit.connect(
                 connection_string,
                 baud              = BAUD,
@@ -155,7 +166,9 @@ def vehicle_connect(connection_string):
         log('Connecting UAV error: unkown', e)
 
     if not vehicle:
-        self.log('Connecting failed')
+        log('Connecting failed')
+        return False
+    return True
 
 
 def vehicle_close():
@@ -371,7 +384,14 @@ def main():
             connection_string = args.connect
 
         # Connect, wait for ready
-        vehicle_connect(connection_string)
+        if not vehicle_connect(connection_string):
+            return
+
+        #def wildcard_callback(self, attr_name, value):
+        #    log(' CALLBACK(%s): %s' % (attr_name,value))
+        #vehicle.add_attribute_listener('*', wildcard_callback)
+        #time.sleep(1)
+        #vehicle.remove_attribute_listener('*', wildcard_callback)
 
         # We need an home position
         vehicle_waitfor_position()
@@ -408,8 +428,6 @@ def main():
         # Kill the vehicle
         if vehicle:
             vehicle_close()
-        else:
-            log('No vehicle to kill')
 
 
 if __name__ == '__main__':
