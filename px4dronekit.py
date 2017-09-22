@@ -25,19 +25,21 @@ To bring the mavesp8266 wifi back into AP mode
 If an esp8266 in client mode fails to connect an AP it falls back into the default
 AP mode with ssid 'PixRacer' and password 'pixracer'.
 """
-import os
 
 # Activate python virtualenv in current user homedir.
 #  (If you work in virtualenv, in ~/venv)
 if __name__ == '__main__':
+    import os
     activate_this = '%s/venv/bin/activate_this.py' % os.path.expanduser('~')
-    execfile(activate_this, dict(__file__=activate_this))
+    execfile(activate_this, dict(__file__ = activate_this))
 
-import time, sys, argparse, math, socket, exceptions
+import os, time, sys, argparse, math, socket, exceptions
 
 import dronekit
 from dronekit import Command, LocationGlobal, VehicleMode
 from pymavlink import mavutil
+
+import geo
 
 
 BAUD              = 57600
@@ -62,25 +64,13 @@ def log(*args):
 
 
 
-def get_distance_metres(aLocation1, aLocation2):
-    """
-    Returns the ground distance in metres between two LocationGlobal objects.
-
-    This method is an approximation, and will not be accurate over large distances and close to the 
-    earth's poles. It comes from the ArduPilot test code: 
-    https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
-    """
-    dlat = aLocation2.lat - aLocation1.lat
-    dlong = aLocation2.lon - aLocation1.lon
-    return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
+def get_distance_metres(loc1, loc2):
+    return geo.get_distance_metres(
+            loc1.lat, loc1.lon, loc2.lat, loc2.lon)
 
 
 def distance_to_current_waypoint():
-    """Gets distance in metres to the current waypoint. 
-    It returns None for the first waypoint (Home location).
-    """
     global vehicle
-
     nextwaypoint = vehicle.commands.next
     if nextwaypoint == 0:
         return None
@@ -89,34 +79,19 @@ def distance_to_current_waypoint():
     lon = missionitem.y
     alt = missionitem.z
     targetWaypointLocation = LocationGlobalRelative(lat, lon, alt)
-    distancetopoint = get_distance_metres(vehicle.location.global_frame, targetWaypointLocation)
-    return distancetopoint
+    return geo.get_distance_metres(
+            vehicle.location.global_frame, targetWaypointLocation)
 
 
-def get_location_offset_meters(original_location, dNorth, dEast, alt):
-    """
-    Returns a LocationGlobal object containing the latitude/longitude `dNorth` and `dEast` metres from the
-    specified `original_location`. The returned Location adds the entered `alt` value to the altitude of the `original_location`.
-    The function is useful when you want to move the vehicle around specifying locations relative to
-    the current vehicle position.
-    The algorithm is relatively accurate over small distances (10m within 1km) except close to the poles.
-    For more information see:
-    http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
-    """
-    earth_radius=6378137.0 #Radius of 'spherical' earth
-    #Coordinate offsets in radians
-    dLat = dNorth/earth_radius
-    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180))
-
-    #New position in decimal degrees
-    newlat = original_location.lat + (dLat * 180/math.pi)
-    newlon = original_location.lon + (dLon * 180/math.pi)
-    return LocationGlobal(newlat, newlon,original_location.alt+alt)
+def get_location_offset_meters(loc, dNorth, dEast, alt):
+    lat, lon = geo.get_location_offset_meters(
+            loc.lat, loc.lon, dNorth, dEast)
+    return LocationGlobal(lat, lon, loc.alt + alt)
 
 
 
 
-def _px4_setMode(mavMode):
+def px4_setMode(mavMode):
     global vehicle
 
     #log(vehicle._master.mode_mapping())
@@ -146,7 +121,7 @@ def vehicle_connect(connection_string):
 
         # Reset as early as possible before it messes with
         # any residues
-        _vehicle_reset()
+        vehicle_reset()
 
         # Now we can wait until its ready
         log('Initialize')
@@ -177,7 +152,7 @@ def vehicle_close():
     global vehicle
 
     try:
-        _vehicle_reset()
+        vehicle_reset()
     except Exception, e:
         log('Error on reset', e)
 
@@ -191,7 +166,7 @@ def vehicle_close():
         vehicle = None
 
 
-def _vehicle_reset():
+def vehicle_reset():
     """Disarm,
     Go into STABILIZED mode,
     Clear any eventual mission.
@@ -204,7 +179,7 @@ def _vehicle_reset():
     log('Disarmed')
 
     # Go into stabilized mode
-    _vehicle_mode('STABILIZED')
+    vehicle_mode('STABILIZED')
 
     # Clear mission
     log('Clear mission')
@@ -214,7 +189,22 @@ def _vehicle_reset():
     log('Mission cleared')
 
 
-def _vehicle_mode(mode):
+def vehicle_arm():
+    """Arm vehicle and wait for armed
+    """
+    global vehicle
+
+    # Set home position to current position. Is this working?
+    vehicle.home_location = vehicle.location.global_frame
+
+    log('Arming')
+    vehicle.armed = True
+    while not vehicle.armed:
+        time.sleep(1)
+    log('Armed')
+
+
+def vehicle_mode(mode):
     """Switch vehicle mode.
     """
     log('Going into mode', mode)
@@ -230,10 +220,12 @@ def vehicle_waitfor_position():
     """
     log('Wait for home position')
     count = 0
-    while not vehicle.home_location:
-        log('(%i)' % count, '    sats:', vehicle.gps_0.satellites_visible,
+    while 1:
+        log('(%i) ' % count, 'sats:', vehicle.gps_0.satellites_visible,
             'fix:', vehicle.gps_0.fix_type,
             'position:', vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, vehicle.location.global_frame.alt)
+        if vehicle.home_location:
+            break
         count += 1
         time.sleep(1)
     home = vehicle.home_location
@@ -318,21 +310,6 @@ def vehicle_mission():
     cmds.next = 1
 
 
-def vehicle_arm():
-    """Arm vehicle and wait for armed
-    """
-    global vehicle
-
-    # Set home position to current position. Is this working?
-    vehicle.home_location = vehicle.location.global_frame
-
-    log('Arming')
-    vehicle.armed = True
-    while not vehicle.armed:
-        time.sleep(1)
-    log('Armed')
-
-
 def vehicle_fly(monitor):
     """Fly mission on vehicle.
     """
@@ -342,7 +319,7 @@ def vehicle_fly(monitor):
     #_px4_setMode(MAV_MODE_AUTO) # ?
 
     # Go into mission mode
-    _vehicle_mode('MISSION')
+    vehicle_mode('MISSION')
 
     if monitor:
         # Monitor location
