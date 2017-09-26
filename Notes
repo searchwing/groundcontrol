@@ -1,4 +1,9 @@
-# Install mavproxy on raspbian:
+# Install swgc
+pip install future serial
+pip install git+https://github.com/dronekit/dronekit-python
+
+
+# Install mavproxy on raspbian
 sudo apt-get install virtualenv python-dev libxml2-dev libxslt-dev -y
 virtualenv venv
 . ./venv/bin/activate

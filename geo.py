@@ -13,7 +13,7 @@ def get_distance_metres(lat1, lon1, lat2, lon2):
     https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
     """
     dlat, dlon = lat2 - lat1, lon2 - lon1
-    return math.sqrt((dlat * dlat) + (dlong * dlong)) * 1.113195e5
+    return math.sqrt((dlat * dlat) + (dlon * dlon)) * 1.113195e5
 
 
 

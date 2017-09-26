@@ -36,7 +36,7 @@ if __name__ == '__main__':
 import os, time, sys, argparse, math, socket, exceptions
 
 import dronekit
-from dronekit import Command, LocationGlobal, VehicleMode
+from dronekit import Command, LocationGlobal, LocationGlobalRelative, VehicleMode
 from pymavlink import mavutil
 
 import geo
@@ -71,6 +71,7 @@ def get_distance_metres(loc1, loc2):
 
 def distance_to_current_waypoint():
     global vehicle
+
     nextwaypoint = vehicle.commands.next
     if nextwaypoint == 0:
         return None
@@ -79,7 +80,7 @@ def distance_to_current_waypoint():
     lon = missionitem.y
     alt = missionitem.z
     targetWaypointLocation = LocationGlobalRelative(lat, lon, alt)
-    return geo.get_distance_metres(
+    return get_distance_metres(
             vehicle.location.global_frame, targetWaypointLocation)
 
 
@@ -100,6 +101,21 @@ def px4_setMode(mavMode):
         vehicle._master.target_system, vehicle._master.target_component,
         mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavMode, 0, 0, 0, 0, 0, 0)
 
+
+
+
+def vehicle_state():
+    global vehicle
+
+    log('mode      :', vehicle.mode.name)
+    log('heartbeat :', vehicle.last_heartbeat)
+    log('battery   :', vehicle.battery)
+    log('gps       :', vehicle.gps_0)
+    log('position  :', vehicle.location.global_relative_frame)
+    log('heading   :', vehicle.heading)
+    log('speed     :', vehicle.airspeed)
+    log('waypoint  :', vehicle.commands.next)
+    log('wpdist    :', distance_to_current_waypoint())
 
 
 
@@ -207,6 +223,8 @@ def vehicle_arm():
 def vehicle_mode(mode):
     """Switch vehicle mode.
     """
+    global vehicle
+
     log('Going into mode', mode)
     vehicle.mode = VehicleMode(mode)
     while not vehicle.mode.name == mode:
@@ -218,6 +236,8 @@ def vehicle_mode(mode):
 def vehicle_waitfor_position():
     """Wait for home position.
     """
+    global vehicle
+
     log('Wait for home position')
     count = 0
     while 1:
@@ -335,6 +355,8 @@ def vehicle_fly(monitor):
                 display_seq = vehicle.commands.next + 1
                 log('Moving to waypoint %s' % display_seq)
                 nextwaypoint = vehicle.commands.next
+            log()
+            vehicle_state()
             time.sleep(1)
 
         # Wait for landed
@@ -373,14 +395,12 @@ def main():
         # We need an home position
         vehicle_waitfor_position()
 
-        log('Status:              %s' % vehicle.system_status.state)
-        log('Mode:                %s' % vehicle.mode.name)
-        log('Firmware:            %s' % vehicle.version)
-        log('Battery:             %s' % vehicle.battery)
-        log('GPS Info:            %s' % vehicle.gps_0)
-        log('Global Location:     %s' % vehicle.location.global_frame)
-        log('Global Location rel: %s' % vehicle.location.global_relative_frame)
-        log('EKF ok:              %s' % vehicle.ekf_ok)
+        log()
+        log('Vehicle is ready')
+        log('Firmware is', vehicle.version)
+        log()
+        vehicle_state()
+        log()
 
         # Lets see any message
     #    @vehicle.on_message('*')
