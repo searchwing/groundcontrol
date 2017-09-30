@@ -338,6 +338,81 @@ def get_position():
 
 
 
+def test_copter_set_target():
+    """Test set_target for copters.
+    """
+    global vehicle
+    log('Vehicle give mission')
+    if not vehicle:
+        log('No vehicle to give a mission')
+        return False
+
+    try:
+        cmds = vehicle.commands
+        cmds.clear()
+
+        home = vehicle.location.global_relative_frame
+        alt, step = 25, 25
+        seq = 1
+
+        # Takeoff to alt meters
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, alt)
+        cmds.add(cmd)
+        seq += 1
+
+        # Move step meters south
+        lat, lon = geo.get_location_offset_meters(home.lat, home.lon, -step, 0)
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                      0, 1,
+                      0, 0, 0, 0,
+                      lat, lon, alt)
+        cmds.add(cmd)
+        seq += 1
+
+        # Come back
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, alt)
+        cmds.add(cmd)
+        seq += 1
+
+        # Land
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_LAND,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, home.alt+1)
+        cmds.add(cmd)
+        seq += 1
+
+        # Upload mission
+        log('Uploading %i commands' % len(cmds))
+        cmds.upload()
+        log('Uploaded %i commands' % len(vehicle.commands))
+        cmds.next = 1
+
+    except BaseException, e:
+        log('Vehicle Error on giving mission', e)
+        traceback.print_exc()
+        return False
+    finally:
+        sync.notify()
+    return True
+
+
+
+
 def set_target(pos):
     """Build and upload mission.
     """
@@ -345,72 +420,69 @@ def set_target(pos):
     log('Vehicle give mission')
     if not vehicle:
         log('No vehicle to give a mission')
+        return False
 
-    else:
-        lat, lon, alt = pos.lat, pos.lon, pos.alt
+    lat, lon, alt = pos.lat, pos.lon, pos.alt
+    try:
+        cmds = vehicle.commands
+        cmds.clear()
 
-        try:
-            cmds = vehicle.commands
-            cmds.clear()
+        home = vehicle.location.global_relative_frame
+        seq = 1
 
-            home = vehicle.location.global_relative_frame
-            alt = 25
-            seq = 1
+        # Takeoff to alt meters
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, alt)
+        cmds.add(cmd)
+        seq += 1
 
-            # Takeoff to alt meters
-            cmd = Command(0, 0, seq,
-                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                          mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-                          0, 1,
-                          0, 0, 0, 0,
-                          home.lat, home.lon, alt)
-            cmds.add(cmd)
-            seq += 1
+        # Move to lat, lon, alt
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                      0, 1,
+                      0, 0, 0, 0,
+                      lat, lon, alt)
+        cmds.add(cmd)
+        seq += 1
 
-            # Move to lat, lon, alt
-            cmd = Command(0, 0, seq,
-                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                          0, 1,
-                          0, 0, 0, 0,
-                          lat, lon, alt)
-            cmds.add(cmd)
-            seq += 1
+        # Come home
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, alt)
+        cmds.add(cmd)
+        seq += 1
 
-            # Move home
-            cmd = Command(0, 0, seq,
-                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                          0, 1,
-                          0, 0, 0, 0,
-                          home.lat, home.lon, alt)
-            cmds.add(cmd)
-            seq += 1
+        # Land
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_LAND,
+                      0, 1,
+                      0, 0, 0, 0,
+                      home.lat, home.lon, home.alt)
+        cmds.add(cmd)
+        seq += 1
 
-            # Land
-            cmd = Command(0, 0, seq,
-                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                          mavutil.mavlink.MAV_CMD_NAV_LAND,
-                          0, 1,
-                          0, 0, 0, 0,
-                          home.lat, home.lon, home.alt)
-            cmds.add(cmd)
-            seq += 1
+        # Upload mission
+        log('Uploading %i commands to vehicle' % len(cmds))
+        cmds.upload()
+        log('Uploaded %i commands to vehicle' % len(vehicle.commands))
+        cmds.next = 1
 
-            # Upload mission
-            log('Uploading %i commands to vehicle' % len(cmds))
-            cmds.upload()
-            log('Uploaded %i commands to vehicle' % len(vehicle.commands))
-            cmds.next = 1
-
-        except BaseException, e:
-            log('Vehicle Error on giving mission', e)
-            traceback.print_exc()
-            return False
-        finally:
-            sync.notify()
-        return True
-
+    except BaseException, e:
+        log('Vehicle Error on giving mission', e)
+        traceback.print_exc()
+        return False
+    finally:
+        sync.notify()
+    return True
 
 
 
