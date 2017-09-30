@@ -16,6 +16,8 @@ FONTNAME    = 'droidsansmono'
 FONTSIZE    = 24
 
 
+# test copter
+TEST_COPTER = True
 
 
 """ Settings for UAV
@@ -29,7 +31,7 @@ FONTSIZE    = 24
      Run GC on 'udp:0.0.0.0:14550'
   Baud
     Dronekit default is 115200
-    USB: 115200 
+    USB: 115200
     3DR Radio: 5700
   Timeouts
     in seconds
@@ -73,4 +75,3 @@ GPS_BAUD = 4800
 BOARD_PORT    = '/dev/ttyBoard'
 BOARD_BAUD    = 115200
 BOARD_TIMEOUT = 2
-

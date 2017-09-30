@@ -3,16 +3,17 @@
 """Everything starts here.
 Call run() to get swgc running.
 """
+from time import sleep
+
+from . ui import ui
+from . gps import gps
+from . uav import uav
+from . switchboard import board
+
 
 def run():
-
-    from time import sleep
-
-    from . ui import ui
-    from . gps import gps
-    from . uav import uav 
-    from . switchboard import board
-
+    """Call to get the app running.
+    """
     gps.start()
     uav.start()
     board.start()
@@ -20,4 +21,3 @@ def run():
 
     while 1:
         sleep(1000)
-

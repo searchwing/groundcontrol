@@ -15,16 +15,14 @@ from . framebuffer import get as get_framebuffer
 
 
 class UI(threading.Thread):
-
-    def __init__(self, *args, **kwargs):
-        threading.Thread.__init__(self, *args, **kwargs)
-        self.daemon = True
+    """Thread controling the SWGC display.
+    """
 
     def run(self):
         while 1:
             try:
                 _run()
-            except Exception, e:
+            except BaseException, e:
                 print e
                 traceback.print_exc()
 
@@ -63,7 +61,7 @@ def _run():
  Longitude %3.5f
  Altitude  %7im
  """ % (upos.lat, upos.lon, upos.alt)
-    
+
         else:
             text = \
 """UAV Current Position
@@ -141,4 +139,3 @@ def _show(text):
         _screen.blit(t, (20, y))
         y += 40
     pygame.display.flip()
-

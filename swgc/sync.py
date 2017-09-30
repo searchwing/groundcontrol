@@ -27,4 +27,3 @@ def notify():
     _condition.acquire()
     _condition.notifyAll()
     _condition.release()
-

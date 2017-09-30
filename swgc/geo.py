@@ -2,12 +2,12 @@
 # @author: sascha@searchwing.org, August 2017
 """Some geo stuff.
 """
-from math import radians, sin, cos, asin, sqrt
+from math import pi, radians, sin, cos, asin, sqrt
 
 
 
 
-class Position:
+class Position(object):
     """Lat/Lon/Alt position.
     """
 
@@ -27,8 +27,11 @@ class Position:
     def __unicode__(self):
         return u'%s' % self.__str__()
 
-    @classmethod
+    @staticmethod
     def copy(pos):
+        """Return Position opbject from passed object that
+        has to have attributes lot, lat, lon.
+        """
         return Position(pos.lat, pos.lon, pos.alt)
 
 
@@ -38,7 +41,7 @@ def haversine(lat1, lon1, lat2, lon2):
     """Spherial distance of two lat/lon geo points.
     https://rosettacode.org/wiki/Haversine_formula#Python
     """
- 
+
     R = 6372.8 # Earth radius in kilometers
 
     dLat = radians(lat2 - lat1)
@@ -55,7 +58,8 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 def get_location_offset_meters(lat, lon, dNorth, dEast):
-    """Returns a latitude/longitude containing `dNorth` and `dEast` metres from the passed 'lat'/'lon' latitude/longitude.
+    """Returns a latitude/longitude containing `dNorth` and `dEast` metres
+    from passed 'lat'/'lon' latitude/longitude.
     For more information see:
     http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
     """
@@ -64,11 +68,10 @@ def get_location_offset_meters(lat, lon, dNorth, dEast):
 
     # Coordinate offsets in radians
     dLat = dNorth / earth_radius
-    dLon = dEast  / (earth_radius * math.cos(math.pi * lat / 180))
+    dLon = dEast  / (earth_radius * cos(pi * lat / 180))
 
     #New position in decimal degrees
-    newlat = lat + (dLat * 180/math.pi)
-    newlon = lon + (dLon * 180/math.pi)
+    newlat = lat + (dLat * 180/pi)
+    newlon = lon + (dLon * 180/pi)
 
     return newlat, newlon
-

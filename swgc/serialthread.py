@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Async work on serial devices.
 """
-import serial, time, threading, traceback
+import time, threading, traceback
+import serial
 
 from . import sync
 
@@ -43,9 +44,9 @@ class SerialThread(threading.Thread):
                 # Connect
                 self.log('Open', self.port, self.baud)
                 self.ser = serial.Serial(
-                        port     = self.port,
-                        baudrate = self.baud,
-                        timeout  = self.timeout)
+                    port     = self.port,
+                    baudrate = self.baud,
+                    timeout  = self.timeout)
 
                 # Open
                 if self.ser.isOpen(): # Can it be open already? Lets test, better is better
@@ -62,7 +63,7 @@ class SerialThread(threading.Thread):
 
             except serial.SerialException, e:
                 self.log('Serial error', e)
-            except Exception, e:
+            except BaseException, e:
                 self.log('Unkown error', e)
                 traceback.print_exc()
 
@@ -70,7 +71,7 @@ class SerialThread(threading.Thread):
                 self.log('Close')
                 try:
                     self.ser.close()
-                except:
+                except BaseException, e:
                     pass
 
                 self.ser = None
@@ -87,4 +88,3 @@ class SerialThread(threading.Thread):
         Dont call, it will be called by this thread.
         """
         raise Exception('Not implemented')
-

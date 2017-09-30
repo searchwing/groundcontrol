@@ -187,7 +187,7 @@ class Board(SerialThread):
         while 1:
             sync.notify()
 
-            
+
             if not uav.is_connected():
                 self.goto_state(STATE_WAIT_FOR_UAV)
                 self.m('Waiting for UAV...')
@@ -379,8 +379,6 @@ class Board(SerialThread):
                         self.m('Launch.')
 
 
-from settings import *
 board = Board(
-        name = 'Board',
-        port = BOARD_PORT, baud = BOARD_BAUD)
-
+    name = 'Board',
+    port = BOARD_PORT, baud = BOARD_BAUD)

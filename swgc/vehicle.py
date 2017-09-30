@@ -2,10 +2,10 @@
 # @author: sascha@searchwing.org, August 2017
 """pixracer/px4/dronekit abstraction.
 """
-import time, socket, exceptions, threading, traceback
+import time, socket, exceptions, traceback
 
 import dronekit
-from dronekit import Command, LocationGlobal, VehicleMode
+from dronekit import Command, VehicleMode
 from pymavlink import mavutil
 
 from . import geo, sync
@@ -21,7 +21,7 @@ MAV_MODE_STABILIZE = 16
 MAV_MODE_MANUAL    = 64
 
 
-# global vehicle
+# global singleton vehicle
 vehicle = None
 
 
@@ -30,11 +30,8 @@ vehicle = None
 def log(*args):
     """Logging for the poor.
     """
-    print 'UAV:',
-    if args:
-        for arg in args:
-            print str(arg),
-    print
+    msg = ' '.join((str(arg) for arg in args)) if args else ''
+    print 'UAV:', msg
 
 
 
@@ -49,14 +46,15 @@ def get_distance_to_current_waypoint():
         return None
 
     nextwaypoint = vehicle.commands.next
-    if nextwaypoint == 0:
+    if not nextwaypoint:
         return None
 
     pos1 = vehicle.location.global_frame
     pos2 = vehicle.commands[nextwaypoint - 1]
 
-    return get_distance_meters(
-            Position.copy(pos1), Position.copy(pos2))
+    pos1 = geo.Position.copy(pos1)
+    pos2 = geo.Position.copy(pos2)
+    return pos1.distance(pos2)
 
 
 
@@ -65,7 +63,7 @@ def px4_set_mode(mavMode):
     """Px4: set mode.
     """
     global vehicle
-    log('Vehicle px4 set mode', mode)
+    log('Vehicle px4 set mode', mavMode)
     if not vehicle:
         log('No vehicle to set px4 mode')
 
@@ -82,18 +80,18 @@ def log_state():
     """
     global vehicle
     if not vehicle:
-        log('Vehicle state: No vehicle')
+        log('Vehicle state: No vehicle, no state')
 
     else:
-        log('mode      :', vehicle.mode.name)
-        log('heartbeat :', vehicle.last_heartbeat)
-        log('battery   :', vehicle.battery)
-        log('gps       :', vehicle.gps_0)
-        log('position  :', vehicle.location.global_relative_frame)
-        log('heading   :', vehicle.heading)
-        log('speed     :', vehicle.airspeed)
-        log('waypoint  :', vehicle.commands.next)
-        log('wpdist    :', distance_to_current_waypoint())
+        log('Mode       :', vehicle.mode.name)
+        log('Heartbeat  :', vehicle.last_heartbeat)
+        log('Battery    :', vehicle.battery)
+        log('GPS        :', vehicle.gps_0)
+        log('Position   :', vehicle.location.global_relative_frame)
+        log('Heading    :', vehicle.heading)
+        log('Speed      :', vehicle.airspeed)
+        log('Waypoint   :', vehicle.commands.next)
+        log('Wpdistance :', get_distance_to_current_waypoint())
 
 
 
@@ -107,44 +105,44 @@ def connect(connection_string):
         log('Already connected a vehicle')
 
     else:
-        while not vehicle:
-            try:
-                # Connect, don't wait until its ready
-                log('Connect vehicle %s' % connection_string)
-                vh = dronekit.connect(
-                        connection_string,
-                        baud              = BAUD,
-                        rate              = REFRESH_RATE,
-                        heartbeat_timeout = TIMEOUT_HEARTBEAT,
-                        wait_ready        = False)
-                log('Connected vehicle')
+        try:
+            # Connect, don't wait until its ready
+            log('Connect vehicle %s' % connection_string)
+            vh = dronekit.connect(
+                connection_string,
+                baud              = BAUD,
+                rate              = REFRESH_RATE,
+                heartbeat_timeout = TIMEOUT_HEARTBEAT,
+                wait_ready        = False)
+            log('Connected vehicle')
 
-                # Reset as early as possible before it messes with
-                # any residues
-                reset()
+            # Reset as early as possible before it messes with
+            # any residues
+            reset()
 
-                # Now we can wait until its ready
-                log('Initialize vehicle')
-                vh.wait_ready(True)
-                log('Initialized vehicle')
-                vehicle = vh
+            # Now we can wait until its ready
+            log('Initialize vehicle')
+            vh.wait_ready(True)
+            log('Initialized vehicle')
+            vehicle = vh
 
-            except socket.error:
-                log('Error Connecting vehicle error: no server')
+        except socket.error, e:
+            log('Error Connecting vehicle error: no server', e)
 
-            except exceptions.OSError:
-                log('Error Connecting vehicle error: no serial')
+        except exceptions.OSError, e:
+            log('Error Connecting vehicle error: no serial', e)
 
-            except dronekit.APIException:
-                log('Error Connecting vehicle error: timeout')
+        except dronekit.APIException, e:
+            log('Error Connecting vehicle error: timeout', e)
 
-            except Exception, e:
-                log('Error Connecting vehicle error: unkown', e)
+        except BaseException, e:
+            # We can't do anything about it
+            log('Error Connecting vehicle error: unkown', e)
 
-            if not vehicle:
-                log('Connecting vehicle failed')
+        if not vehicle:
+            log('Connecting vehicle failed')
 
-            sync.notify()
+        sync.notify()
 
 
 
@@ -153,7 +151,7 @@ def is_connected():
     """Test if vehicle is connected.
     """
     global vehicle
-    return not vehicle == None
+    return not vehicle is None
 
 
 
@@ -174,7 +172,8 @@ def close():
             vehicle.close()
             log('Closed vehicle')
 
-        except Exception, e:
+        except BaseException, e:
+            # We can't do anything here
             log('Vehicle Error on closing', e)
 
         vehicle = None
@@ -211,7 +210,7 @@ def reset():
             cmds.upload()
             log('Cleared vehicle mission')
 
-        except Exception, e:
+        except BaseException, e:
             log('Vehicle Error on reset', e)
 
     sync.notify()
@@ -228,25 +227,24 @@ def arm():
         log('No vehicle to arm')
         return False
 
-    else:
-        try:
-            # Set home position to current position. Is this working?
-            vehicle.home_location = vehicle.location.global_frame
+    try:
+        # Set home position to current position. Is this working?
+        vehicle.home_location = vehicle.location.global_frame
 
-            log('Arming vehicle')
-            vehicle.armed = True
-            while not vehicle.armed:
-                time.sleep(1)
-            log('Armed vehicle')
-            return True
+        log('Arming vehicle')
+        vehicle.armed = True
+        while not vehicle.armed:
+            time.sleep(1)
+        log('Armed vehicle')
+        return True
 
-        except Exception, e:
-            log('Vehicle Error on arming', e)
+    except BaseException, e:
+        log('Vehicle Error on arming', e)
 
-        finally:
-            sync.notify()
+    finally:
+        sync.notify()
 
-        return False
+    return False
 
 
 
@@ -267,10 +265,31 @@ def set_mode(mode):
                 time.sleep(1)
             log('Mode of vehicle is', vehicle.mode.name)
 
-        except Exception, e:
+        except BaseException, e:
             log('Vehicle Error on setting mode', e)
 
     sync.notify()
+
+
+
+
+def get_mode():
+    """Get vehicle mode.
+    """
+    global vehicle
+    if not vehicle:
+        log('No vehicle for getting mode')
+        return None
+
+    return vehicle.mode.name
+
+
+
+
+def is_flying():
+    """Is the vehicle flying?
+    """
+    return get_mode() == 'MISSION'
 
 
 
@@ -289,15 +308,17 @@ def wait_for_position():
             while 1:
                 log('(%i) ' % count, 'sats:', vehicle.gps_0.satellites_visible,
                     'fix:', vehicle.gps_0.fix_type,
-                    'position:', vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, vehicle.location.global_frame.alt)
+                    'position:',
+                    vehicle.location.global_frame.lat,
+                    vehicle.location.global_frame.lon,
+                    vehicle.location.global_frame.alt)
                 if vehicle.home_location:
                     break
                 count += 1
                 time.sleep(1)
-            home = vehicle.home_location
             log('Got a vehicle home position', vehicle.home_location)
 
-        except Exception, e:
+        except BaseException, e:
             log('Vehicle Error waiting for home position', e)
 
     sync.notify()
@@ -333,42 +354,46 @@ def set_target(pos):
             cmds.clear()
 
             home = vehicle.location.global_relative_frame
-            alt, step = 25, 25 
+            alt = 25
             seq = 1
 
             # Takeoff to alt meters
             cmd = Command(0, 0, seq,
-                    mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-                    0, 1,
-                    0, 0, 0, 0,
-                    home.lat, home.lon, alt)
+                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                          0, 1,
+                          0, 0, 0, 0,
+                          home.lat, home.lon, alt)
             cmds.add(cmd)
             seq += 1
 
             # Move to lat, lon, alt
             cmd = Command(0, 0, seq,
-                    mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                    0, 1,
-                    0, 0, 0, 0,
-                    lat, lon, alt)
+                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                          0, 1,
+                          0, 0, 0, 0,
+                          lat, lon, alt)
             cmds.add(cmd)
             seq += 1
 
             # Move home
             cmd = Command(0, 0, seq,
-                    mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                    0, 1,
-                    0, 0, 0, 0,
-                    home.lat, home.lon, alt)
+                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                          0, 1,
+                          0, 0, 0, 0,
+                          home.lat, home.lon, alt)
             cmds.add(cmd)
             seq += 1
 
             # Land
             cmd = Command(0, 0, seq,
-                    mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_LAND,
-                    0, 1,
-                    0, 0, 0, 0,
-                    home.lat, home.lon, home.alt)
+                          mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_LAND,
+                          0, 1,
+                          0, 0, 0, 0,
+                          home.lat, home.lon, home.alt)
             cmds.add(cmd)
             seq += 1
 
@@ -378,7 +403,7 @@ def set_target(pos):
             log('Uploaded %i commands to vehicle' % len(vehicle.commands))
             cmds.next = 1
 
-        except Exception, e:
+        except BaseException, e:
             log('Vehicle Error on giving mission', e)
             traceback.print_exc()
             return False
@@ -390,13 +415,13 @@ def set_target(pos):
 
 
 
-def launch(monitor = True):
+def launch(monitor = False):
     """Fly mission on vehicle.
     """
     global vehicle
-    log('Vehicle fly')
+    log('Vehicle launch')
     if not vehicle:
-        log('No vehicle to fly')
+        log('No vehicle to launch')
 
     else:
         #log('Going into AUTO mode')
@@ -432,4 +457,3 @@ def launch(monitor = True):
             log('Landed')
 
         sync.notify()
-

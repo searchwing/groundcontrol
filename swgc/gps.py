@@ -4,6 +4,7 @@
 import time, datetime
 
 from . import sync
+from . import settings
 from . geo import Position
 from . serialthread import SerialThread
 
@@ -32,35 +33,35 @@ class GPS(SerialThread):
                     int(year), int(month), int(day), int(hour), int(minute), int(second)
                 self.dt = datetime.datetime(year, month, day, hour, minute, second)
                 self.ts = time.mktime(self.dt.timetuple())
-                
+
 
             elif sentence.startswith('$GPGGA'):
                 sentence = sentence.split(',')
-                (format,
-                utc,
-                latitude,
-                northsouth,
-                longitude,
-                eastwest,
-                quality,
-                number_of_satellites_in_use,
-                horizontal_dilution,
-                altitude,
-                above_sea_unit,
-                geoidal_separation,
-                geoidal_separation_unit,
-                data_age,
-                diff_ref_stationID) = sentence
+                (frmat,
+                 utc,
+                 latitude,
+                 northsouth,
+                 longitude,
+                 eastwest,
+                 quality,
+                 number_of_satellites_in_use,
+                 horizontal_dilution,
+                 altitude,
+                 above_sea_unit,
+                 geoidal_separation,
+                 geoidal_separation_unit,
+                 data_age,
+                 diff_ref_stationID) = sentence
 
                 latitude = latitude.split('.')
                 d,m = latitude
                 d,m = d[:-2], d[-2:] + '.' + m
-                latitude = int(d) + float(m) / 60 
+                latitude = int(d) + float(m) / 60
 
                 longitude = longitude.split('.')
                 d,m = longitude
                 d,m = d[:-2], d[-2:] + '.' + m
-                longitude = int(d) + float(m) / 60 
+                longitude = int(d) + float(m) / 60
 
                 if northsouth == 'S':
                     latitude = -latitude
@@ -83,8 +84,6 @@ class GPS(SerialThread):
         return self.position
 
 
-from . import settings
 gps = GPS(
-        name = 'GPS',
-        port = settings.GPS_PORT, baud = settings.GPS_BAUD)
-
+    name = 'GPS',
+    port = settings.GPS_PORT, baud = settings.GPS_BAUD)

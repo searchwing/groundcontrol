@@ -1,39 +1,39 @@
 # -*- coding: utf-8 -*-
 # @author: sascha@searchwing.org, August 2017
 """The UAV this app controls.
-Object rapper for vehicle module.
+Object wrapper for actual vehicle module.
 """
-import threading, time
+import threading, traceback, time
 
 from . import settings, vehicle
 
 
 class UAV(threading.Thread):
-
-    def __init__(self, *args, **kwargs):
-        threading.Thread.__init__(self, *args, **kwargs)
-        self.daemon = True
+    """Singelton object for the vehicle module.
+    Keeps connecting the vehicle, delegates all calls to it.
+    """
 
     def run(self):
         while 1:
-            if vehicle.is_connected():
-                time.sleep(10)
-
-            else:
-                try:
-                    if not vehicle.is_connected():
-                        vehicle.connect(settings.UAV_ADDRESS)
-                except Exception, e:
-                    print e
-                    traceback.print_exc()
+            try:
                 if not vehicle.is_connected():
-                    time.sleep(1)
+                    vehicle.connect(settings.UAV_ADDRESS)
+
+                if vehicle.is_flying():
+                    vehicle.log_state()
+
+            except BaseException, e:
+                # Continue at any price
+                print e
+                traceback.print_exc()
+
+            time.sleep(1)
 
     def __getattr__(self, name):
-        """Proxy all calls to vehicle module.
+        """Delegate all calls to the wrapped vehicle module.
         """
         return getattr(vehicle, name)
 
 
+# Singleton UAV, call start to get connected.
 uav = UAV()
-

@@ -6,7 +6,7 @@ import pygame
 
 
 
-    
+
 def get():
     """Get pygame compatible framebuffer device.
     """
@@ -28,7 +28,7 @@ def get():
             break
     if not found:
         raise Exception('No suitable video driver found!')
-    
+
     size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
     print "Framebuffer size: %d x %d" % (size[0], size[1])
 
@@ -48,4 +48,3 @@ def test():
     get().fill((255,0,0))
     pygame.display.update()
     time.sleep(5)
-
