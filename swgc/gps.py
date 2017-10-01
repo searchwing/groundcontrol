@@ -116,7 +116,6 @@ def start(port, baud):
     _gps.start()
 
 
-@property
 def gps():
     """Return the global signgleton intanciated with start().
     """

@@ -15,7 +15,7 @@ def run():
     """
     uav.start(UAV_ADDRESS)
     gps.start(GPS_PORT, GPS_BAUD)
-    board.start(BOARD_PORT, BOARD_PORT)
+    board.start(BOARD_PORT, BOARD_BAUD)
     ui.start()
 
     while 1:

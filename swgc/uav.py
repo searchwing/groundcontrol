@@ -13,8 +13,9 @@ class UAV(threading.Thread):
     Keeps connecting the vehicle, delegates all calls to it.
     """
     def __init__(self, address):
-        super(UAV, self).__init__(self)
+        super(UAV, self).__init__()
         self.address = address
+        self.daemon = True
 
 
     def run(self):
@@ -53,7 +54,6 @@ def start(address):
     _uav.start()
 
 
-@property
 def uav():
     """Return the global signgleton intanciated with start().
     """
