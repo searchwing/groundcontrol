@@ -70,7 +70,11 @@ class GPS(SerialThread):
 
                 altitude = float(altitude)
 
-                self.position = Position(lat = latitude, lon = longitude, alt = altitude)
+                if latitude and longitude: # And what if lat/lon is acutally 0/0?
+                    self.position = Position(
+                            lat = latitude, lon = longitude, alt = altitude)
+                else:
+                    self.position = None
 
                 sync.notify()
                 time.sleep(1) # GPS 1hz?
