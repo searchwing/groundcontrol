@@ -3,21 +3,25 @@
 """The UAV this app controls.
 Object wrapper for actual vehicle module.
 """
-import threading, traceback, time
+import threading, traceback
 
-from . import settings, vehicle, sync
+from . import vehicle, sync
 
 
 class UAV(threading.Thread):
     """Singelton object for the vehicle module.
     Keeps connecting the vehicle, delegates all calls to it.
     """
+    def __init__(self, address):
+        super(UAV, self).__init__(self)
+        self.address = address
+
 
     def run(self):
         while 1:
             try:
                 if not vehicle.is_connected():
-                    vehicle.connect(settings.UAV_ADDRESS)
+                    vehicle.connect(self.address)
 
                 if vehicle.is_flying():
                     vehicle.log_state()
@@ -35,5 +39,23 @@ class UAV(threading.Thread):
         return getattr(vehicle, name)
 
 
-# Singleton UAV, call start to get connected.
-uav = UAV()
+
+
+# a global singleton
+_uav = None
+
+
+def start(address):
+    """Instanciate and start a global singleton.
+    """
+    global _uav
+    _uav = UAV(address)
+    _uav.start()
+
+
+@property
+def uav():
+    """Return the global signgleton intanciated with start().
+    """
+    global _uav
+    return _uav

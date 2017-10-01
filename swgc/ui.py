@@ -28,6 +28,11 @@ class UI(threading.Thread):
 
 ui = UI()
 
+def start():
+    """Start the UI.
+    """
+    ui.start()
+
 
 
 

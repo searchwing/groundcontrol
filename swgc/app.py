@@ -5,18 +5,17 @@ Call run() to get swgc running.
 """
 from time import sleep
 
-from . ui import ui
-from . gps import gps
-from . uav import uav
-from . switchboard import board
+from . import uav, gps, ui
+from . import switchboard as board
+from . settings import *
 
 
 def run():
     """Call to get the app running.
     """
-    gps.start()
-    uav.start()
-    board.start()
+    uav.start(UAV_ADDRESS)
+    gps.start(GPS_PORT, GPS_BAUD)
+    board.start(BOARD_PORT, BOARD_PORT)
     ui.start()
 
     while 1:

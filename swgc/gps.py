@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Provide current local GPS position from local serial GPS device.
+"""Provide current local GPS position from a local serial GPS device.
 """
 import time, datetime
 
 from . import sync
-from . import settings
 from . geo import Position
 from . serialthread import SerialThread
 
@@ -14,15 +13,18 @@ from . serialthread import SerialThread
 class GPS(SerialThread):
     """Async (re)connect local serial GPS device,
     parse NMEA, provide current local GPS position.
-    Currently with 1hz.
     """
 
     def __init__(self, name, port, baud):
+        """Init.
+        """
         super(GPS, self).__init__(name = name, port = port, baud = baud)
         self.position, self.ts, self.dt = None, None, None
 
 
     def work(self):
+        """Internal.
+        """
         while 1:
             sentence = self.ser.readline()[:-1]
             if sentence.startswith('$GPZDA'):
@@ -72,22 +74,51 @@ class GPS(SerialThread):
 
                 if latitude and longitude: # And what if lat/lon is acutally 0/0?
                     self.position = Position(
-                            lat = latitude, lon = longitude, alt = altitude)
+                        lat = latitude, lon = longitude, alt = altitude)
+                    sync.notify()
                 else:
                     self.position = None
 
-                sync.notify()
-                time.sleep(1) # GPS 1hz?
+
+    def wait_for_position(self):
+        """Block until a position is available.
+        """
+        pos = None
+        while 1:
+            pos = self.position
+            if pos:
+                break
+            sync.wait()
+        return pos
 
 
     def get_position(self):
         """Get last known position or None for
         latitude, longitude, altitude.
-        Updated once per second.
+        Updated ~ once per second.
         """
         return self.position
 
 
-gps = GPS(
-    name = 'GPS',
-    port = settings.GPS_PORT, baud = settings.GPS_BAUD)
+
+
+# a global singleton
+_gps = None
+
+
+def start(port, baud):
+    """Instanciate and start a global singleton.
+    """
+    global _gps
+    _gps = GPS(
+        name = 'GPS',
+        port = port, baud = baud)
+    _gps.start()
+
+
+@property
+def gps():
+    """Return the global signgleton intanciated with start().
+    """
+    global _gps
+    return _gps

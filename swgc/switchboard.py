@@ -6,7 +6,6 @@ import time
 from . import sync
 from . gps import gps
 from . uav import uav
-from . settings import *
 from . serialthread import SerialThread
 
 
@@ -316,7 +315,6 @@ class Board(SerialThread):
                         self.m('Transmitting target...')
                         time.sleep(1)
 
-                        self.pos.alt = ALTITUDE
                         if uav.set_target(self.pos):
                             self.m('Target transmitted.')
                             self.lightsOff(False)
@@ -379,6 +377,25 @@ class Board(SerialThread):
                         self.m('Launch.')
 
 
-board = Board(
-    name = 'Board',
-    port = BOARD_PORT, baud = BOARD_BAUD)
+
+
+# a global signgleton
+_board = None
+
+
+def start(port, baud):
+    """Instanciate and start a global singleton.
+    """
+    global _board
+    _board = Board(
+        name = 'Board', port = port, baud = baud)
+    _board.start()
+
+
+@property
+def board():
+    """Return the global signgleton
+    intanciated with start().
+    """
+    global _board
+    return _board

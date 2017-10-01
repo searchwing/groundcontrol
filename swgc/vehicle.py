@@ -2,7 +2,7 @@
 # @author: sascha@searchwing.org, August 2017
 """pixracer/px4/dronekit abstraction.
 """
-import time, socket, exceptions, traceback
+import time, socket, exceptions
 
 import dronekit
 from dronekit import Command, VehicleMode
@@ -434,7 +434,6 @@ def test_copter_set_target():
 
     except BaseException, e:
         log('Vehicle Error on giving mission', e)
-        traceback.print_exc()
         return False
     sync.notify()
     return True
@@ -507,7 +506,6 @@ def set_target(pos):
 
     except BaseException, e:
         log('Vehicle Error on giving mission', e)
-        traceback.print_exc()
         return False
     sync.notify()
     return True
@@ -559,7 +557,6 @@ def launch(monitor = False):
 
     except BaseException, e:
         log('Vehicle Error on launch (and monitor)', e)
-        traceback.print_exc()
         return False
     sync.notify()
     return True

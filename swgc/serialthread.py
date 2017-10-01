@@ -23,9 +23,10 @@ class SerialThread(threading.Thread):
         super(SerialThread, self).__init__()
         self.name = name
         self.port, self.baud, self.timeout = port, baud, timeout
-
-        self.daemon = True
         self.ser = None
+        self.closed = False
+
+        self.daemon = True # Thread attribute
 
 
     def log(self, *msg):
@@ -38,7 +39,7 @@ class SerialThread(threading.Thread):
     def run(self):
         """Internal. Don't call.
         """
-        while 1:
+        while not self.closed:
             connection_failed = True # Expecting the worst
             try:
                 # Connect
@@ -88,3 +89,26 @@ class SerialThread(threading.Thread):
         Dont call, it will be called by this thread.
         """
         raise Exception('Not implemented')
+
+
+    def wait_for_serial_connection(self):
+        """Block until we have a serial connection.
+        """
+        while self.ser is None:
+            sync.wait()
+
+
+    def close_serial_connection(self):
+        """Close serial connectin if any.
+        """
+        self.log('Close forever')
+        self.closed = True
+
+        ser, self.ser = self.ser, None
+        if not ser is None:
+            try:
+                ser.close()
+            except BaseException, e:
+                self.log('Error on closing serial connection', e)
+
+        self.log('Closed forever')
