@@ -54,6 +54,7 @@ def get_distance_to_current_waypoint():
 
     pos1 = geo.Position.copy(pos1)
     pos2 = geo.Position.copy(pos2)
+
     return pos1.distance(pos2)
 
 
@@ -66,11 +67,18 @@ def px4_set_mode(mavMode):
     log('Vehicle px4 set mode', mavMode)
     if not vehicle:
         log('No vehicle to set px4 mode')
+        return False
 
-    else:
+    try:
         vehicle._master.mav.command_long_send(
             vehicle._master.target_system, vehicle._master.target_component,
             mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavMode, 0, 0, 0, 0, 0, 0)
+
+    except BaseException, e:
+        log('Error px4 set mode', e)
+        return False
+    sync.notify()
+    return True
 
 
 
@@ -82,7 +90,7 @@ def log_state():
     if not vehicle:
         log('Vehicle state: No vehicle, no state')
 
-    else:
+    try:
         log('Mode       :', vehicle.mode.name)
         log('Heartbeat  :', vehicle.last_heartbeat)
         log('Battery    :', vehicle.battery)
@@ -93,8 +101,13 @@ def log_state():
         log('Waypoint   :', vehicle.commands.next)
         log('Wpdistance :', get_distance_to_current_waypoint())
 
+    except BaseException, e:
+        log('Error logging state', e)
 
 
+
+
+# ------ Connection ----->
 
 def connect(connection_string):
     """Connect vehicle.
@@ -103,55 +116,49 @@ def connect(connection_string):
     log('Vehicle connect')
     if vehicle:
         log('Already connected a vehicle')
+        return True
 
-    else:
-        try:
-            # Connect, don't wait until its ready
-            log('Connect vehicle %s' % connection_string)
-            vh = dronekit.connect(
-                connection_string,
-                baud              = BAUD,
-                rate              = REFRESH_RATE,
-                heartbeat_timeout = TIMEOUT_HEARTBEAT,
-                wait_ready        = False)
-            log('Connected vehicle')
+    try:
+        # Connect, don't wait until its ready
+        log('Connect vehicle %s' % connection_string)
+        vh = dronekit.connect(
+            connection_string,
+            baud              = BAUD,
+            rate              = REFRESH_RATE,
+            heartbeat_timeout = TIMEOUT_HEARTBEAT,
+            wait_ready        = False)
+        log('Connected vehicle')
 
-            # Reset as early as possible before it messes with
-            # any residues
-            reset()
+        # Reset as early as possible before it messes with
+        # any residues
+        reset()
 
-            # Now we can wait until its ready
-            log('Initialize vehicle')
-            vh.wait_ready(True)
-            log('Initialized vehicle')
-            vehicle = vh
+        # Now we can wait until its ready
+        log('Initialize vehicle')
+        vh.wait_ready(True)
+        log('Initialized vehicle')
+        vehicle = vh
 
-        except socket.error, e:
-            log('Error Connecting vehicle error: no server', e)
+    except socket.error, e:
+        log('Error Connecting vehicle error: no server', e)
 
-        except exceptions.OSError, e:
-            log('Error Connecting vehicle error: no serial', e)
+    except exceptions.OSError, e:
+        log('Error Connecting vehicle error: no serial', e)
 
-        except dronekit.APIException, e:
-            log('Error Connecting vehicle error: timeout', e)
+    except dronekit.APIException, e:
+        log('Error Connecting vehicle error: timeout', e)
 
-        except BaseException, e:
-            # We can't do anything about it
-            log('Error Connecting vehicle error: unkown', e)
+    except BaseException, e:
+        # We can't do anything about it
+        log('Error Connecting vehicle error: unkown', e)
 
-        if not vehicle:
-            log('Connecting vehicle failed')
+    if not vehicle:
+        log('Connecting vehicle failed')
 
+    if vehicle:
         sync.notify()
-
-
-
-
-def is_connected():
-    """Test if vehicle is connected.
-    """
-    global vehicle
-    return not vehicle is None
+        return True
+    return False
 
 
 
@@ -163,22 +170,91 @@ def close():
     log('Vehicle close')
     if not vehicle:
         log('No vehicle to close')
+        return
 
-    else:
-        reset()
+    reset()
 
-        try:
-            log('Close vehicle')
-            vehicle.close()
-            log('Closed vehicle')
+    vh = vehicle
+    vehicle = None
 
-        except BaseException, e:
-            # We can't do anything here
-            log('Vehicle Error on closing', e)
+    try:
+        log('Close vehicle')
+        vh.close()
+        log('Closed vehicle')
 
-        vehicle = None
+    except BaseException, e:
+        log('Vehicle Error on closing', e)
+    finally:
+        sync.notify()
 
+
+
+
+def wait_for_connection():
+    """Wait for connection to the vehicle.
+    """
+    global vehicle
+    log('Wait for connection')
+
+    while vehicle is None:
+        sync.wait(1)
     sync.notify()
+
+
+
+
+def is_connected():
+    """Test if vehicle is connected.
+    """
+    global vehicle
+    return not vehicle is None
+
+# <----- Connection ------
+
+
+
+
+def wait_for_position():
+    """Wait for home position.
+    """
+    global vehicle
+    log('Vehicle waiting for home position')
+    if not vehicle:
+        log('No vehicle to wait for home position')
+        return False
+
+    try:
+        count = 0
+        while 1:
+            log('(%i) ' % count, 'sats:', vehicle.gps_0.satellites_visible,
+                'fix:', vehicle.gps_0.fix_type,
+                'position:',
+                vehicle.location.global_frame.lat,
+                vehicle.location.global_frame.lon,
+                vehicle.location.global_frame.alt)
+            if vehicle.home_location:
+                break
+            count += 1
+            time.sleep(1)
+        log('Got a vehicle home position', vehicle.home_location)
+
+    except BaseException, e:
+        log('Vehicle Error waiting for home position', e)
+        return False
+    sync.notify()
+    return True
+
+
+
+
+def get_position():
+    """Get vehicle position if any.
+    """
+    global vehicle
+    if not vehicle:
+        return None
+
+    return vehicle.location.global_frame
 
 
 
@@ -192,28 +268,29 @@ def reset():
     log('Vehicle reset')
     if not vehicle:
         log('No vehicle to reset')
+        return False
 
-    else:
-        try:
-            # Disarm, Waiting here for disarmed never returns :(
-            log('Disarm vehicle')
-            vehicle.armed = False
-            log('Disarmed vehicle')
+    try:
+        # Disarm, Waiting here for disarmed never returns :(
+        log('Disarm vehicle')
+        vehicle.armed = False
+        log('Disarmed vehicle')
 
-            # Go into stabilized mode
-            set_mode('STABILIZED')
+        # Go into stabilized mode
+        set_mode('STABILIZED')
 
-            # Clear mission
-            log('Clear vehicle mission')
-            cmds = vehicle.commands
-            cmds.clear()
-            cmds.upload()
-            log('Cleared vehicle mission')
+        # Clear mission
+        log('Clear vehicle mission')
+        cmds = vehicle.commands
+        cmds.clear()
+        cmds.upload()
+        log('Cleared vehicle mission')
 
-        except BaseException, e:
-            log('Vehicle Error on reset', e)
-
+    except BaseException, e:
+        log('Vehicle Error on reset', e)
+        return False
     sync.notify()
+    return True
 
 
 
@@ -236,15 +313,12 @@ def arm():
         while not vehicle.armed:
             time.sleep(1)
         log('Armed vehicle')
-        return True
 
     except BaseException, e:
         log('Vehicle Error on arming', e)
-
-    finally:
-        sync.notify()
-
-    return False
+        return False
+    sync.notify()
+    return True
 
 
 
@@ -256,19 +330,20 @@ def set_mode(mode):
     log('Vehicle set mode', mode)
     if not vehicle:
         log('No vehicle for setting mode')
+        return False
 
-    else:
-        try:
-            vehicle.mode = VehicleMode(mode)
-            while not vehicle.mode.name == mode:
-                log('Mode of vehicle is', vehicle.mode.name)
-                time.sleep(1)
+    try:
+        vehicle.mode = VehicleMode(mode)
+        while not vehicle.mode.name == mode:
             log('Mode of vehicle is', vehicle.mode.name)
+            time.sleep(1)
+        log('Mode of vehicle is', vehicle.mode.name)
 
-        except BaseException, e:
-            log('Vehicle Error on setting mode', e)
-
+    except BaseException, e:
+        log('Vehicle Error on setting mode', e)
+        return False
     sync.notify()
+    return True
 
 
 
@@ -278,7 +353,6 @@ def get_mode():
     """
     global vehicle
     if not vehicle:
-        log('No vehicle for getting mode')
         return None
 
     return vehicle.mode.name
@@ -290,50 +364,6 @@ def is_flying():
     """Is the vehicle flying?
     """
     return get_mode() == 'MISSION'
-
-
-
-
-def wait_for_position():
-    """Wait for home position.
-    """
-    global vehicle
-    log('Vehicle waiting for home position')
-    if not vehicle:
-        log('No vehicle to wait for home position')
-
-    else:
-        try:
-            count = 0
-            while 1:
-                log('(%i) ' % count, 'sats:', vehicle.gps_0.satellites_visible,
-                    'fix:', vehicle.gps_0.fix_type,
-                    'position:',
-                    vehicle.location.global_frame.lat,
-                    vehicle.location.global_frame.lon,
-                    vehicle.location.global_frame.alt)
-                if vehicle.home_location:
-                    break
-                count += 1
-                time.sleep(1)
-            log('Got a vehicle home position', vehicle.home_location)
-
-        except BaseException, e:
-            log('Vehicle Error waiting for home position', e)
-
-    sync.notify()
-
-
-
-
-def get_position():
-    """Get vehicle position if any.
-    """
-    global vehicle
-    if not vehicle:
-        return None
-
-    return vehicle.location.global_frame
 
 
 
@@ -406,8 +436,7 @@ def test_copter_set_target():
         log('Vehicle Error on giving mission', e)
         traceback.print_exc()
         return False
-    finally:
-        sync.notify()
+    sync.notify()
     return True
 
 
@@ -480,8 +509,7 @@ def set_target(pos):
         log('Vehicle Error on giving mission', e)
         traceback.print_exc()
         return False
-    finally:
-        sync.notify()
+    sync.notify()
     return True
 
 
@@ -494,8 +522,9 @@ def launch(monitor = False):
     log('Vehicle launch')
     if not vehicle:
         log('No vehicle to launch')
+        return False
 
-    else:
+    try:
         #log('Going into AUTO mode')
         #px4_set_mode(MAV_MODE_AUTO) # ?
 
@@ -528,4 +557,9 @@ def launch(monitor = False):
                 time.sleep(1)
             log('Landed')
 
-        sync.notify()
+    except BaseException, e:
+        log('Vehicle Error on launch (and monitor)', e)
+        traceback.print_exc()
+        return False
+    sync.notify()
+    return True
