@@ -45,7 +45,6 @@ class UAV(threading.Thread):
 # a global singleton
 _uav = None
 
-
 def start(address):
     """Instanciate and start a global singleton.
     """
@@ -53,9 +52,8 @@ def start(address):
     _uav = UAV(address)
     _uav.start()
 
+class _UAV():
+    def __getattr__(self, attr):
+        return getattr(_uav, attr)
 
-def uav():
-    """Return the global signgleton intanciated with start().
-    """
-    global _uav
-    return _uav
+uav = _UAV()

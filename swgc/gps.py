@@ -105,7 +105,6 @@ class GPS(SerialThread):
 # a global singleton
 _gps = None
 
-
 def start(port, baud):
     """Instanciate and start a global singleton.
     """
@@ -115,9 +114,7 @@ def start(port, baud):
         port = port, baud = baud)
     _gps.start()
 
-
-def gps():
-    """Return the global signgleton intanciated with start().
-    """
-    global _gps
-    return _gps
+class _GPS():
+    def __getattr__(self, attr):
+        return getattr(_gps, attr)
+gps = _GPS()

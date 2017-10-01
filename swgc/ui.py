@@ -54,12 +54,12 @@ def _run():
 
     while 1:
         texts = []
-        texts.append('%s UTC\n' % gps().dt if gps().dt else '......\n')
+        texts.append('%s UTC\n' % gps.dt if gps.dt else '......\n')
 
 
-        gpos = gps().get_position()
-        upos = uav().get_position()
-        bpos = board().get_position()
+        gpos = gps.get_position()
+        upos = uav.get_position()
+        bpos = board.get_position()
 
 
         if upos:
@@ -104,7 +104,7 @@ def _run():
         texts.append(text)
 
 
-        text = board().get_message()
+        text = board.get_message()
         if text:
             texts.append(text)
 
