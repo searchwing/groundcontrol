@@ -1,4 +1,4 @@
-# Install swgc
+# Install dronekit
 pip install future serial
 pip install git+https://github.com/dronekit/dronekit-python
 
@@ -23,4 +23,3 @@ sudo apt-get install uv4l-raspicam-extras
 sudo apt-get install uv4l-server uv4l-uvc uv4l-xscreen uv4l-mjpegstream
 sudo reboot
 # ... http://<host>:8080/
-
