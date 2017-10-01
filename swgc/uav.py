@@ -5,7 +5,7 @@ Object wrapper for actual vehicle module.
 """
 import threading, traceback, time
 
-from . import settings, vehicle
+from . import settings, vehicle, sync
 
 
 class UAV(threading.Thread):
@@ -27,7 +27,7 @@ class UAV(threading.Thread):
                 print e
                 traceback.print_exc()
 
-            time.sleep(1)
+            sync.wait(1)
 
     def __getattr__(self, name):
         """Delegate all calls to the wrapped vehicle module.
