@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @author: sascha@searchwing.org, August 2017
 """Test.
 Test the swgc.uav module.
 """
