@@ -390,7 +390,7 @@ def start(port, baud):
         name = 'Board', port = port, baud = baud)
     _board.start()
 
-class _Board():
+class _Board(object):
     def __getattr__(self, attr):
         return getattr(_board, attr)
 

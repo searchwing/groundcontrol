@@ -52,7 +52,7 @@ def get_distance_to_current_waypoint():
     pos2 = vehicle.commands[nextwaypoint - 1]
 
     pos1 = geo.Position.copy(pos1)
-    pos2 = geo.Position.copy(pos2)
+    pos2 = geo.Position(pos2.x, pos2.y, pos2.z)
 
     return pos1.distance(pos2)
 
@@ -173,9 +173,7 @@ def close():
 
     reset()
 
-    vh = vehicle
-    vehicle = None
-
+    vh, vehicle = vehicle, None
     try:
         log('Close vehicle')
         vh.close()
@@ -183,8 +181,7 @@ def close():
 
     except BaseException, e:
         log('Vehicle Error on closing', e)
-    finally:
-        sync.notify()
+    sync.notify()
 
 
 
@@ -326,7 +323,7 @@ def set_mode(mode):
     """Switch vehicle mode.
     """
     global vehicle
-    log('Vehicle set mode', mode)
+    log('Vehicle setting mode', mode)
     if not vehicle:
         log('No vehicle for setting mode')
         return False
@@ -334,9 +331,8 @@ def set_mode(mode):
     try:
         vehicle.mode = VehicleMode(mode)
         while not vehicle.mode.name == mode:
-            log('Mode of vehicle is', vehicle.mode.name)
             time.sleep(1)
-        log('Mode of vehicle is', vehicle.mode.name)
+        log('Mode of vehicle now is', vehicle.mode.name)
 
     except BaseException, e:
         log('Vehicle Error on setting mode', e)
@@ -369,73 +365,11 @@ def is_flying():
 
 def test_copter_set_target():
     """Test set_target for copters.
+    Simulate with a position 25m to the north, 25m altitude
     """
-    global vehicle
-    log('Vehicle give mission')
-    if not vehicle:
-        log('No vehicle to give a mission')
-        return False
-
-    try:
-        cmds = vehicle.commands
-        cmds.clear()
-
-        home = vehicle.location.global_relative_frame
-        alt, step = 25, 25
-        seq = 1
-
-        # Takeoff to alt meters
-        cmd = Command(0, 0, seq,
-                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                      mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-                      0, 1,
-                      0, 0, 0, 0,
-                      home.lat, home.lon, alt)
-        cmds.add(cmd)
-        seq += 1
-
-        # Move step meters south
-        lat, lon = geo.get_location_offset_meters(home.lat, home.lon, -step, 0)
-        cmd = Command(0, 0, seq,
-                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                      0, 1,
-                      0, 0, 0, 0,
-                      lat, lon, alt)
-        cmds.add(cmd)
-        seq += 1
-
-        # Come back
-        cmd = Command(0, 0, seq,
-                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-                      0, 1,
-                      0, 0, 0, 0,
-                      home.lat, home.lon, alt)
-        cmds.add(cmd)
-        seq += 1
-
-        # Land
-        cmd = Command(0, 0, seq,
-                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-                      mavutil.mavlink.MAV_CMD_NAV_LAND,
-                      0, 1,
-                      0, 0, 0, 0,
-                      home.lat, home.lon, home.alt+1)
-        cmds.add(cmd)
-        seq += 1
-
-        # Upload mission
-        log('Uploading %i commands' % len(cmds))
-        cmds.upload()
-        log('Uploaded %i commands' % len(vehicle.commands))
-        cmds.next = 1
-
-    except BaseException, e:
-        log('Vehicle Error on giving mission', e)
-        return False
-    sync.notify()
-    return True
+    home = vehicle.location.global_relative_frame
+    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 25, 0)
+    return set_target(geo.Position(lat, lon, 25))
 
 
 

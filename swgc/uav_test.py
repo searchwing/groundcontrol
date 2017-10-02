@@ -16,5 +16,13 @@ def run():
     if vehicle.test_copter_set_target() and vehicle.arm():
         vehicle.launch()
 
-    while 1:
-        time.sleep(1000)
+    try:
+        while 1:
+            vehicle.log_state()
+            time.sleep(1)
+    except BaseException, e:
+        print e
+    finally:
+        print
+        print 'Aboard'
+        vehicle.close()

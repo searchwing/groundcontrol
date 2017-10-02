@@ -51,7 +51,7 @@ def start(address):
     _uav = UAV(address)
     _uav.start()
 
-class _UAV():
+class _UAV(object):
     def __getattr__(self, attr):
         return getattr(_uav, attr)
 

@@ -114,7 +114,7 @@ def start(port, baud):
         port = port, baud = baud)
     _gps.start()
 
-class _GPS():
+class _GPS(object):
     def __getattr__(self, attr):
         return getattr(_gps, attr)
 gps = _GPS()
