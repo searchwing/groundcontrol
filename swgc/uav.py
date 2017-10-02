@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# @author: sascha@searchwing.org, August 2017
 """The UAV this app controls.
 Object wrapper for actual vehicle module.
 """

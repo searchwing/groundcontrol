@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @author: sascha@searchwing.org, August 2017
 """Main.
 See notes for (how to install) requirements.
 See swgc.settings for settings.

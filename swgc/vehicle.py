@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# @author: sascha@searchwing.org, August 2017
 """pixracer/px4/dronekit abstraction.
 """
 import time, socket, exceptions
