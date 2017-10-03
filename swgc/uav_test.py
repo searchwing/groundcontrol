@@ -4,25 +4,24 @@
 import time
 
 from . import vehicle
-from . settings import *
+from . settings import UAV_ADDRESS
 
 
 def run():
     """Call to test.
     """
-    vehicle.connect(UAV_ADDRESS)
-    vehicle.wait_for_connection()
-    vehicle.wait_for_position()
-    if vehicle.test_copter_set_target() and vehicle.arm():
-        vehicle.launch()
+    if not vehicle.connect(UAV_ADDRESS):     return
+    if not vehicle.wait_for_position():      return
+    if not vehicle.test_copter_set_target(): return
+    if not vehicle.arm():                    return
+    vehicle.launch()
 
     try:
         while 1:
             vehicle.log_state()
             time.sleep(1)
-    except BaseException, e:
-        print e
-    finally:
+    except KeyboardInterrupt:
         print
         print 'Aboard'
+    finally:
         vehicle.close()

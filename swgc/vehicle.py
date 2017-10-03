@@ -41,7 +41,7 @@ def get_distance_to_current_waypoint():
     else None.
     """
     global vehicle
-    if not vehicle:
+    if vehicle is None:
         return None
 
     nextwaypoint = vehicle.commands.next
@@ -64,7 +64,7 @@ def px4_set_mode(mavMode):
     """
     global vehicle
     log('Vehicle px4 set mode', mavMode)
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to set px4 mode')
         return False
 
@@ -86,7 +86,7 @@ def log_state():
     """Log selected vehicle states.
     """
     global vehicle
-    if not vehicle:
+    if vehicle is None:
         log('Vehicle state: No vehicle, no state')
 
     try:
@@ -108,6 +108,17 @@ def log_state():
 
 # ------ Connection ----->
 
+def connect_sitl():
+    """Connect dronekit sitl simulator.
+    """
+    import dronekit_sitl
+    sitl = dronekit_sitl.start_default(52.52, 13.41)
+    connection_string = sitl.connection_string()
+    return connect(connection_string)
+
+
+
+
 def connect(connection_string):
     """Connect vehicle.
     """
@@ -127,6 +138,7 @@ def connect(connection_string):
             heartbeat_timeout = TIMEOUT_HEARTBEAT,
             wait_ready        = False)
         log('Connected vehicle')
+        vehicle = vh
 
         # Reset as early as possible before it messes with
         # any residues
@@ -148,13 +160,12 @@ def connect(connection_string):
         log('Error Connecting vehicle error: timeout', e)
 
     except BaseException, e:
-        # We can't do anything about it
         log('Error Connecting vehicle error: unkown', e)
 
-    if not vehicle:
+    if vehicle is None:
         log('Connecting vehicle failed')
 
-    if vehicle:
+    if not vehicle is None:
         sync.notify()
         return True
     return False
@@ -167,7 +178,7 @@ def close():
     """
     global vehicle
     log('Vehicle close')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to close')
         return
 
@@ -215,7 +226,7 @@ def wait_for_position():
     """
     global vehicle
     log('Vehicle waiting for home position')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to wait for home position')
         return False
 
@@ -247,7 +258,7 @@ def get_position():
     """Get vehicle position if any.
     """
     global vehicle
-    if not vehicle:
+    if vehicle is None:
         return None
 
     return vehicle.location.global_frame
@@ -262,7 +273,7 @@ def reset():
     """
     global vehicle
     log('Vehicle reset')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to reset')
         return False
 
@@ -296,7 +307,7 @@ def arm():
     """
     global vehicle
     log('Vehicle arm')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to arm')
         return False
 
@@ -324,7 +335,7 @@ def set_mode(mode):
     """
     global vehicle
     log('Vehicle setting mode', mode)
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle for setting mode')
         return False
 
@@ -347,7 +358,7 @@ def get_mode():
     """Get vehicle mode.
     """
     global vehicle
-    if not vehicle:
+    if vehicle is None:
         return None
 
     return vehicle.mode.name
@@ -365,11 +376,17 @@ def is_flying():
 
 def test_copter_set_target():
     """Test set_target for copters.
-    Simulate with a position 25m to the north, 25m altitude
+    Simulate with a position 20m to the north, 10m altitude
     """
+    global vehicle
+    log('Vehicle test copter set target')
+    if vehicle is None:
+        log('No vehicle to test copter set target')
+        return False
+
     home = vehicle.location.global_relative_frame
-    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 25, 0)
-    return set_target(geo.Position(lat, lon, 25))
+    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 10, 0)
+    return set_target(geo.Position(lat, lon, 20))
 
 
 
@@ -379,7 +396,7 @@ def set_target(pos):
     """
     global vehicle
     log('Vehicle give mission')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to give a mission')
         return False
 
@@ -451,7 +468,7 @@ def launch(monitor = False):
     """
     global vehicle
     log('Vehicle launch')
-    if not vehicle:
+    if vehicle is None:
         log('No vehicle to launch')
         return False
 

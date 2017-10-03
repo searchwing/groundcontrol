@@ -1,23 +1,10 @@
 # -*- coding: utf-8 -*-
 """App settings.
 """
-import os
-
-
-BASEDIR = os.path.abspath(os.path.dirname(__file__))
-
-
-ALTITUDE = 30
-
-
 
 CLEAR_COLOR = (255, 255, 255)
 FONTNAME    = 'droidsansmono'
 FONTSIZE    = 24
-
-
-# test copter
-TEST_COPTER = True
 
 
 """ Settings for UAV
@@ -29,29 +16,9 @@ TEST_COPTER = True
      dronekit-sitl plane-3.3.0 --home=<lat>,<lon>,<alt>,<yaw>
      mavproxy.py --master=tcp:0.0.0.0:5760 --out=udp:<IP of GC>:14550 --map
      Run GC on 'udp:0.0.0.0:14550'
-  Baud
-    Dronekit default is 115200
-    USB: 115200
-    3DR Radio: 5700
-  Timeouts
-    in seconds
-  Heartbeat timeout
-    dronekit default is 30
-  Refresh rate
-    dronekit default is 4 for 4Hz
 """
-UAV_ADDRESS                 = 'udp:0.0.0.0:14550'
-UAV_BAUD                    = 57600
-UAV_TIMEOUT_HEARTBEAT       = 30
-UAV_TIMEOUT_CONNECTION      = 5
-UAV_TIMEOUT_CONNECTION_TEST = 5
-UAV_REFRESH_RATE            = 4
-
-UAV_TIMEOUT_PREARM          = 10
-UAV_TIMEOUT_ARM             = 10
-UAV_TIMEOUT_GPS             = 10
-
-
+#UAV_ADDRESS = 'udp:0.0.0.0:14550'
+UAV_ADDRESS = 'tcp:0.0.0.0:5760'
 
 
 # In /etc/udev/rules.d/99-usbserial.rules
@@ -63,15 +30,11 @@ UAV_TIMEOUT_GPS             = 10
 # and YYY with result of
 # sudo udevadm info --query=property --name=/dev/ttyUSB1 | grep ID_SERIAL_SHORT
 
-
 """ Settings for local GPS
 """
 GPS_PORT = '/dev/ttyGPS'
 GPS_BAUD = 4800
 
-
 """Settings for switchboard
 """
-BOARD_PORT    = '/dev/ttyBoard'
-BOARD_BAUD    = 115200
-BOARD_TIMEOUT = 2
+BOARD_PORT = '/dev/ttyBoard'
