@@ -18,6 +18,7 @@ STATE_SET_LON               = 5
 STATE_SET_TARGET            = 6
 STATE_START_MOTORS          = 7
 STATE_LAUNCH                = 8
+STATE_FLYING                = 9
 
 
 def state2str(state):
@@ -31,6 +32,7 @@ def state2str(state):
         'STATE_SET_TARGET',
         'STATE_START_MOTORS',
         'STATE_LAUNCH',
+        'STATE_FLYING',
     )[state]
 
 
@@ -172,10 +174,11 @@ class Board(SerialThread):
             self.lightsSignal()
 
             while 1:
-                self.pos = gps.get_position()
-                if self.pos:
-                    break
                 sync.wait(1)
+                pos = gps.get_position()
+                if pos:
+                    self.pos = pos
+                    break
             self.lightsSignal()
 
         self.m('...Found local position')
@@ -191,9 +194,9 @@ class Board(SerialThread):
                 self.goto_state(STATE_WAIT_FOR_UAV)
                 self.m('Waiting for UAV...')
                 while 1:
+                    sync.wait(1)
                     if uav.is_connected():
                         break
-                    sync.wait(1)
                 self.m('...Found UAV')
 
 
@@ -201,9 +204,9 @@ class Board(SerialThread):
                 self.goto_state(STATE_WAIT_FOR_UAV_POSITION)
                 self.m('Waiting for UAV Position...')
                 while 1:
+                    sync.wait(1)
                     if uav.get_position():
                         break
-                    sync.wait(1)
                 self.m('...Found UAV Position')
 
 
@@ -367,7 +370,7 @@ class Board(SerialThread):
 
                         if uav.launch():
                             self.m('Launched')
-                            self.goto_state(STATE_NO_STATE)
+                            self.goto_state(STATE_FLYING)
                             return
 
                         else:
