@@ -82,7 +82,7 @@ def _run():
 
         if bpos:
             if gpos:
-                dist = gpos.distance(bpos)
+                dist = gpos.get_distance(bpos)
                 dist = '%7im' % dist
             else:
                 dist = ''

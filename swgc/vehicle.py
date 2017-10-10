@@ -51,10 +51,10 @@ def get_distance_to_current_waypoint():
     pos1 = vehicle.location.global_frame
     pos2 = vehicle.commands[nextwaypoint - 1]
 
-    pos1 = geo.Position.copy(pos1)
+    pos1 = geo.Position(pos1.x, pos1.y, pos1.z)
     pos2 = geo.Position(pos2.x, pos2.y, pos2.z)
 
-    return pos1.distance(pos2)
+    return pos1.get_distance(pos2)
 
 
 
@@ -370,23 +370,6 @@ def is_flying():
     """Is the vehicle flying?
     """
     return get_mode() == 'MISSION'
-
-
-
-
-def test_copter_set_target():
-    """Test set_target for copters.
-    Simulate with a position 20m to the north, 10m altitude
-    """
-    global vehicle
-    log('Vehicle test copter set target')
-    if vehicle is None:
-        log('No vehicle to test copter set target')
-        return False
-
-    home = vehicle.location.global_relative_frame
-    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 20, 0)
-    return set_target(geo.Position(lat, lon, 10))
 
 
 

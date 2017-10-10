@@ -38,3 +38,4 @@ GPS_BAUD = 4800
 """Settings for switchboard
 """
 BOARD_PORT = '/dev/ttyBoard'
+BOARD_BAUD = 115200

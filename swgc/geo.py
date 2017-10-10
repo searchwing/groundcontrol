@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Some geo stuff.
 """
-from math import pi, radians, sin, cos, asin, sqrt
+from math import degrees, atan2
 
 import geopy, geopy.distance
 
@@ -16,20 +16,6 @@ class Position(object):
         self.lat, self.lon, self.alt = lat, lon, alt
 
 
-    def distance(self, pos):
-        """Get distance to passed position.
-        """
-        return haversine(
-                self.lat, self.lon, pos.lat, pos.lon) * 1000
-
-
-    def get_location_by_offset_meters(self, distance, bearing):
-        """Return Position in passed distance in meters and bearing.
-        """
-        lat, lon = get_location_by_offset_meters(
-                self.lat, self.lon, distance, bearing)
-        return Position(lat = lat, lon = lon, alt = self.alt)
-
     def __str__(self):
         """To string.
         """
@@ -37,7 +23,29 @@ class Position(object):
 
 
     def __unicode__(self):
-        return u'%s' % self.__str__()
+        return u'%3.5f %3.5f %4i' % (self.lat, self.lon, self.alt)
+
+
+    def get_distance(self, pos):
+        """Get distance meters to passed position.
+        """
+        return geopy.distance.distance(
+                (self.lat, self.lon), (pos.lat, pos.lon)).meters
+
+    def get_bearing(self, pos):
+        """Get bearing degrees to passed location.
+        """
+        return degrees(atan2(self.lat - pos.lat, self.lon - pos.lon))
+
+
+    def get_location_by_offset_meters_and_bearing(self, distance, bearing):
+        """Get Position in passed distance meters and bearing.
+        """
+        dist = geopy.distance.distance(meters = distance)
+        dest = dist.destination(
+                geopy.Point(self.lat, self.lon), bearing)
+        return Position(
+                lat = st.latitude, lon = dest.longitude, alt = self.alt)
 
 
     @staticmethod
@@ -46,53 +54,3 @@ class Position(object):
         has to have attributes lot, lat, lon.
         """
         return Position(pos.lat, pos.lon, pos.alt)
-
-
-
-
-def haversine(lat1, lon1, lat2, lon2):
-    """Spherial distance of two lat/lon geo points.
-    https://rosettacode.org/wiki/Haversine_formula#Python
-    """
-
-    R = 6372.8 # Earth radius in kilometers
-
-    dLat = radians(lat2 - lat1)
-    dLon = radians(lon2 - lon1)
-    lat1 = radians(lat1)
-    lat2 = radians(lat2)
-
-    a = sin(dLat/2)**2 + cos(lat1)*cos(lat2)*sin(dLon/2)**2
-    c = 2*asin(sqrt(a))
-
-    return R * c
-
-
-def get_location_by_offset_meters(lat, lon, distance, bearing):
-    """Returns a latitude/longitude containing `dNorth` and `dEast` metres
-    from passed 'lat'/'lon', distance and bearing.
-    """
-    origin = geopy.Point(lat, lon)
-    destination = geopy.distance.distance(
-            meters = distance).destination(origin, bearing)
-    return destination.latitude, destination.longitude
-
-
-def get_location_offset_meters(lat, lon, dNorth, dEast):
-    """Returns a latitude/longitude containing `dNorth` and `dEast` metres
-    from passed 'lat'/'lon' latitude/longitude.
-    For more information see:
-    http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
-    """
-    #Radius of 'spherical' earth
-    earth_radius = 6378137.0
-
-    # Coordinate offsets in radians
-    dLat = dNorth / earth_radius
-    dLon = dEast  / (earth_radius * cos(pi * lat / 180))
-
-    #New position in decimal degrees
-    newlat = lat + (dLat * 180/pi)
-    newlon = lon + (dLon * 180/pi)
-
-    return newlat, newlon
