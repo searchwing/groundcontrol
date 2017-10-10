@@ -3,28 +3,42 @@
 """
 from math import pi, radians, sin, cos, asin, sqrt
 
+import geopy, geopy.distance
+
 
 
 
 class Position(object):
-    """Lat/Lon/Alt position.
+    """Lat/Lon/Alt position and functions.
     """
 
-    def __init__(self, lat, lon, alt = None):
+    def __init__(self, lat, lon, alt):
         self.lat, self.lon, self.alt = lat, lon, alt
+
 
     def distance(self, pos):
         """Get distance to passed position.
         """
-        return haversine(self.lat, self.lon, pos.lat, pos.lon) * 1000
+        return haversine(
+                self.lat, self.lon, pos.lat, pos.lon) * 1000
+
+
+    def get_location_by_offset_meters(self, distance, bearing):
+        """Return Position in passed distance in meters and bearing.
+        """
+        lat, lon = get_location_by_offset_meters(
+                self.lat, self.lon, distance, bearing)
+        return Position(lat = lat, lon = lon, alt = self.alt)
 
     def __str__(self):
         """To string.
         """
         return '%3.5f %3.5f %4i' % (self.lat, self.lon, self.alt)
 
+
     def __unicode__(self):
         return u'%s' % self.__str__()
+
 
     @staticmethod
     def copy(pos):
@@ -54,6 +68,14 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 
+def get_location_by_offset_meters(lat, lon, distance, bearing):
+    """Returns a latitude/longitude containing `dNorth` and `dEast` metres
+    from passed 'lat'/'lon', distance and bearing.
+    """
+    origin = geopy.Point(lat, lon)
+    destination = geopy.distance.distance(
+            meters = distance).destination(origin, bearing)
+    return destination.latitude, destination.longitude
 
 
 def get_location_offset_meters(lat, lon, dNorth, dEast):

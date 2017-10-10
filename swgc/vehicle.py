@@ -385,8 +385,8 @@ def test_copter_set_target():
         return False
 
     home = vehicle.location.global_relative_frame
-    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 10, 0)
-    return set_target(geo.Position(lat, lon, 20))
+    lat, lon = geo.get_location_offset_meters(home.lat, home.lon, 20, 0)
+    return set_target(geo.Position(lat, lon, 10))
 
 
 

@@ -17,8 +17,8 @@ FONTSIZE    = 24
      mavproxy.py --master=tcp:0.0.0.0:5760 --out=udp:<IP of GC>:14550 --map
      Run GC on 'udp:0.0.0.0:14550'
 """
-#UAV_ADDRESS = 'udp:0.0.0.0:14550'
-UAV_ADDRESS = 'tcp:0.0.0.0:5760'
+UAV_ADDRESS = 'udp:0.0.0.0:14550'
+#UAV_ADDRESS = 'tcp:0.0.0.0:5760'
 
 
 # In /etc/udev/rules.d/99-usbserial.rules
