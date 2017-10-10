@@ -30,7 +30,7 @@ class Position(object):
         """Get distance meters to passed position.
         """
         return geopy.distance.distance(
-                (self.lat, self.lon), (pos.lat, pos.lon)).meters
+            (self.lat, self.lon), (pos.lat, pos.lon)).meters
 
     def get_bearing(self, pos):
         """Get bearing degrees to passed location.
@@ -43,9 +43,9 @@ class Position(object):
         """
         dist = geopy.distance.distance(meters = distance)
         dest = dist.destination(
-                geopy.Point(self.lat, self.lon), bearing)
+            geopy.Point(self.lat, self.lon), bearing)
         return Position(
-                lat = st.latitude, lon = dest.longitude, alt = self.alt)
+            lat = dest.latitude, lon = dest.longitude, alt = self.alt)
 
 
     @staticmethod

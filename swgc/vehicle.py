@@ -51,8 +51,8 @@ def get_distance_to_current_waypoint():
     pos1 = vehicle.location.global_frame
     pos2 = vehicle.commands[nextwaypoint - 1]
 
-    pos1 = geo.Position(pos1.x, pos1.y, pos1.z)
-    pos2 = geo.Position(pos2.x, pos2.y, pos2.z)
+    pos1 = geo.Position(pos1.lat, pos1.lat, pos1.alt)
+    pos2 = geo.Position(pos2.lat, pos2.lat, pos2.alt)
 
     return pos1.get_distance(pos2)
 
