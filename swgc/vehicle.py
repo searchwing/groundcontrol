@@ -223,6 +223,7 @@ def is_connected():
 
 def wait_for_position():
     """Wait for home position.
+    Return True on success.
     """
     global vehicle
     log('Vehicle waiting for home position')
@@ -385,6 +386,7 @@ def is_flying():
 
 def set_target(pos):
     """Build and upload mission.
+    Return True on success.
     """
     global vehicle
     log('Vehicle give mission')

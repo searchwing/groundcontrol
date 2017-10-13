@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Some geo stuff.
 """
-from LatLon import *
+from LatLon import LatLon
 import geopy, geopy.distance
 
 
@@ -31,6 +31,16 @@ class Position(object):
         has to have attributes lat, lon, alt.
         """
         return Position(pos.lat, pos.lon, pos.alt)
+
+
+    def get_distance(self, pos):
+        """Get distance meters to passed position.
+        """
+        p1 = LatLon(self.lat, self.lon)
+        p2 = LatLon(pos.lat, pos.lon)
+        dist = p1.distance(p2) # km
+        dist *= 1000 # m
+        return dist
 
 
     def get_distance_and_heading(self, pos):
