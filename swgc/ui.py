@@ -2,7 +2,7 @@
 """SWGC UI.
 On notify rewrite display.
 """
-import threading, collections, traceback
+import time, threading, collections, traceback
 import pygame
 
 from . import sync
@@ -28,6 +28,7 @@ class UI(threading.Thread):
             except BaseException, e:
                 print e
                 traceback.print_exc()
+                time.sleep(5)
 
 ui = UI()
 
@@ -63,12 +64,16 @@ def _run():
 
 
         if upos:
+            head = uav.get_heading()
+            head = '%7i\xb0' % head if not head is None else ''
+
             text = \
  """UAV Current Position
  Latitude  %3.5f
  Longitude %3.5f
  Altitude  %7im
- """ % (upos.lat, upos.lon, upos.alt)
+ Heading   %s
+ """ % (upos.lat, upos.lon, upos.alt, head)
 
         else:
             text = \
@@ -82,17 +87,20 @@ def _run():
 
         if bpos:
             if gpos:
-                dist = gpos.get_distance(bpos)
-                dist = '%7im' % dist
+                dist, head = gpos.get_distance_and_heading(bpos)
+                dist = int(dist)
+                head = '%7i\xb0' % head if dist else ''
+                dist = '%7im'    % dist
             else:
-                dist = ''
+                dist, head = '', ''
 
             text = \
 """UAV Target Position
  Latitude  %3.5f
  Longitude %3.5f
  Distance  %s
- """ % (bpos.lat, bpos.lon, dist)
+ Heading   %s
+ """ % (bpos.lat, bpos.lon, dist, head)
 
         else:
             text = \
@@ -100,6 +108,7 @@ def _run():
  Latitude
  Longitude
  Distance
+ Heading
 """
         texts.append(text)
 

@@ -261,8 +261,17 @@ def get_position():
     if vehicle is None:
         return None
 
-    return vehicle.location.global_frame
+    return vehicle.location.global_frame if vehicle.location else None
 
+
+def get_heading():
+    """Get vehicle heading if any.
+    """
+    global vehicle
+    if vehicle is None:
+        return None
+
+    return vehicle.heading
 
 
 
