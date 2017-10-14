@@ -2,6 +2,9 @@
 """App settings.
 """
 
+ALTITUDE = 15
+
+
 CLEAR_COLOR = (255, 255, 255)
 FONTNAME    = 'droidsansmono'
 FONTSIZE    = 24

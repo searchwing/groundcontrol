@@ -30,7 +30,7 @@ class Position(object):
         """Get Position object from passed object that
         has to have attributes lat, lon, alt.
         """
-        return Position(pos.lat, pos.lon, pos.alt)
+        return Position(pos.lat, pos.lon, pos.alt) if pos else None
 
 
     def get_distance(self, pos):

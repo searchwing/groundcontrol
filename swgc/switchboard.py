@@ -6,6 +6,7 @@ import time
 from . import sync
 from . gps import gps
 from . uav import uav
+from . settings import ALTITUDE
 from . serialthread import SerialThread
 
 
@@ -167,7 +168,7 @@ class Board(SerialThread):
         self.goto_state(STATE_NO_STATE)
 
 
-        self.pos = gps.get_position()
+        self.pos = geo.Position.copy(gps.get_position())
         if not self.pos:
             self.goto_state(STATE_WAIT_FOR_POS)
             self.m('Waiting for local position...')
@@ -322,6 +323,7 @@ class Board(SerialThread):
                         self.m('Transmitting target...')
                         time.sleep(1)
 
+                        self.pos.alt = ALTITUDE
                         if uav.set_target(self.pos):
                             self.m('Target transmitted.')
                             self.lightsOff(False)

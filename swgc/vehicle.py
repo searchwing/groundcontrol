@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """pixracer/px4/dronekit abstraction.
 """
-import time, socket, exceptions
+import time, socket, exceptions, traceback
 
 import dronekit
 from dronekit import Command, VehicleMode
@@ -102,6 +102,7 @@ def log_state():
 
     except BaseException, e:
         log('Error logging state', e)
+        traceback.print_exc()
 
 
 
@@ -261,11 +262,12 @@ def get_position():
     global vehicle
     if vehicle is None:
         return None
+    if vehicle.location is None:
+        return None
 
-    pos = vehicle.location.global_frame if vehicle.location else None
-    if pos and pos.lat and pos.lon and pos.alt:
-        return pos
-    return None
+    return geo.Position.copy(
+        vehicle.location.global_frame)
+
 
 
 def get_heading():
