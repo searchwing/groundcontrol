@@ -262,7 +262,10 @@ def get_position():
     if vehicle is None:
         return None
 
-    return vehicle.location.global_frame if vehicle.location else None
+    pos = vehicle.location.global_frame if vehicle.location else None
+    if pos and pos.lat and pos.lon and pos.alt:
+        return pos
+    return None
 
 
 def get_heading():
