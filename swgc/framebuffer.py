@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 """Frame buffer stuff.
 """
-import os
+import os, atexit
 import pygame
 
 
+screen = None
 
 
 def get():
     """Get pygame compatible framebuffer device.
     """
+    global screen
+    if screen:
+        return screen
+    print 'Open display'
 
     disp_no = os.getenv("DISPLAY")
     if disp_no:
@@ -39,6 +44,20 @@ def get():
     pygame.mouse.set_visible(False)
     return screen
 
+
+@atexit.register
+def close():
+    global screen
+    if not screen:
+        return
+    print 'Close display'
+
+    screen = None
+    try:
+        pygame.display.quit()
+        pygame.quit()
+    except Exception, e:
+        print 'Error on closing pygame', e
 
 
 def test():

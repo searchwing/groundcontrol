@@ -2,7 +2,7 @@
 """Everything starts here.
 Call run() to get swgc running.
 """
-from time import sleep
+import sys, time
 
 from . import uav, gps, ui
 from . import switchboard as board
@@ -17,5 +17,9 @@ def run():
     board.start(BOARD_PORT, BOARD_BAUD)
     ui.start()
 
-    while 1:
-        sleep(1000)
+    try:
+        while 1:
+            time.sleep(1000)
+    except Exception, e:
+        print e
+        sys.exit() # really release all resources

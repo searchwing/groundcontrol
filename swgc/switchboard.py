@@ -247,14 +247,18 @@ class Board(SerialThread):
                     self.light(LIGHT_TWO, LIGHT_ON)
                     continue
 
-                self.m('Aborted')
-                self.lightsOff(False)
-                self.light(LIGHT_FOUR, LIGHT_ON)
-                self.goto_state(STATE_NO_STATE)
-                uav.reset()
-                time.sleep(5)
-                self.lightsOff()
-                return
+                if uav.is_flying():
+                    self.m('Return to Land')
+                    uav.return_to_land()
+                else:
+                    self.m('Abort')
+                    self.lightsOff(False)
+                    self.light(LIGHT_FOUR, LIGHT_ON)
+                    self.goto_state(STATE_NO_STATE)
+                    uav.reset()
+                    time.sleep(5)
+                    self.lightsOff()
+                    return
 
 
 

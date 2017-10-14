@@ -504,3 +504,17 @@ def launch(monitor = False):
         return False
     sync.notify()
     return True
+
+
+
+def return_to_land():
+    """Return to land.
+    """
+    global vehicle
+    log('Vehicle RTL')
+    if vehicle is None:
+        log('No vehicle to RTL')
+        return False
+
+    set_mode("RTL")
+    return True
