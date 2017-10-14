@@ -8,17 +8,24 @@ import pygame
 screen = None
 
 
+def log(*args):
+    """Logging for the poor.
+    """
+    msg = ' '.join((str(arg) for arg in args)) if args else ''
+    print 'Framebuffer:', msg
+
+
 def get():
     """Get pygame compatible framebuffer device.
     """
     global screen
     if screen:
         return screen
-    print 'Open display'
+    log('Open display')
 
     disp_no = os.getenv("DISPLAY")
     if disp_no:
-        print "Running under X display = {0}".format(disp_no)
+        log("Running under X display = {0}".format(disp_no))
 
     found = False
     for driver in ('directfb', 'fbcon', 'svgalib'):
@@ -35,7 +42,7 @@ def get():
         raise Exception('No suitable video driver found!')
 
     size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-    print "Framebuffer size: %d x %d" % (size[0], size[1])
+    log("size %d x %d" % (size[0], size[1]))
 
     pygame.init()
     pygame.display.init()
@@ -50,14 +57,14 @@ def close():
     global screen
     if not screen:
         return
-    print 'Close display'
+    log('Close display')
 
     screen = None
     try:
         pygame.display.quit()
         pygame.quit()
     except Exception, e:
-        print 'Error on closing pygame', e
+        log('Error on closing pygame', e)
 
 
 def test():
