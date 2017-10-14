@@ -3,7 +3,7 @@
 """
 import time
 
-from . import sync
+from . import sync, geo
 from . gps import gps
 from . uav import uav
 from . settings import ALTITUDE
