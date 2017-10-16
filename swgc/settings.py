@@ -2,7 +2,7 @@
 """App settings.
 """
 
-ALTITUDE = 15
+ALTITUDE = 12
 
 
 CLEAR_COLOR = (255, 255, 255)

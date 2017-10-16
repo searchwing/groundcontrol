@@ -2,36 +2,57 @@
 """The UAV this app controls.
 Object wrapper for actual vehicle module.
 """
-import threading, traceback
+import time, threading
 
-from . import vehicle, sync
+from . import vehicle
 
 
 class UAV(threading.Thread):
     """Singelton object for the vehicle module.
     Keeps connecting the vehicle, delegates all calls to it.
     """
-    def __init__(self, address):
+    def __init__(self):
         super(UAV, self).__init__()
-        self.address = address
         self.daemon = True
+        self.address, self.running, self.closed = None, False, True
+
+
+    def start(self, address):
+        self.address, self.running, self.closed = address, True, False
+        super(UAV, self).start()
+
+
+    def close(self):
+        self.running = False
+
+
+    def is_closed(self):
+        return not vehicle.is_connected() or self.closed
 
 
     def run(self):
-        while 1:
+        while self.running:
             try:
                 if not vehicle.is_connected():
                     vehicle.connect(self.address)
 
-                if vehicle.is_flying():
+                if vehicle.is_flying() or vehicle.is_rtl():
                     vehicle.log_state()
 
-            except BaseException, e:
-                # Continue at any price
-                print e
-                traceback.print_exc()
+                time.sleep(1)
 
-            sync.wait(1)
+            except BaseException, e:
+                print e
+                time.sleep(1)
+
+        if vehicle.is_connected():
+            try:
+                vehicle.close()
+            except BaseException, e:
+                print e
+
+        self.closed = True
+
 
     def __getattr__(self, name):
         """Delegate all calls to the wrapped vehicle module.
@@ -39,20 +60,4 @@ class UAV(threading.Thread):
         return getattr(vehicle, name)
 
 
-
-
-# a global singleton
-_uav = None
-
-def start(address):
-    """Instanciate and start a global singleton.
-    """
-    global _uav
-    _uav = UAV(address)
-    _uav.start()
-
-class _UAV(object):
-    def __getattr__(self, attr):
-        return getattr(_uav, attr)
-
-uav = _UAV()
+uav = UAV()

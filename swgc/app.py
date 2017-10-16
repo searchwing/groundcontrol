@@ -2,9 +2,10 @@
 """Everything starts here.
 Call run() to get swgc running.
 """
-import sys, time
+import sys, time, traceback
 
-from . import uav, gps, ui
+from . uav import uav
+from . import gps, ui
 from . import switchboard as board
 from . settings import UAV_ADDRESS, GPS_PORT, GPS_BAUD, BOARD_PORT, BOARD_BAUD
 
@@ -33,6 +34,16 @@ def run():
     except Exception, e:
         # Something else
         print e
+        traceback.print_exc()
+
+    try:
+        uav.close()
+    except Exception, e:
+        print e
+        traceback.print_exc()
+    else:
+        while not uav.is_closed():
+            time.sleep(0.2)
 
     print 'Bye'
     # Really release all resources

@@ -168,47 +168,46 @@ class Board(SerialThread):
         self.goto_state(STATE_NO_STATE)
 
 
-        self.pos = geo.Position.copy(gps.get_position())
+        self.pos = gps.get_position()
         if not self.pos:
             self.goto_state(STATE_WAIT_FOR_POS)
             self.m('Waiting for local position...')
             self.lightsSignal()
-
             while 1:
                 sync.wait(1)
-                pos = gps.get_position()
-                if pos:
-                    self.pos = pos
+                self.pos = gps.get_position()
+                if self.pos:
                     break
+            self.m('...Found local position')
             self.lightsSignal()
+            time.sleep(1)
 
-        self.m('...Found local position')
-        time.sleep(2)
+
+        if not uav.is_connected():
+            self.goto_state(STATE_WAIT_FOR_UAV)
+            self.m('Waiting for UAV...')
+            while 1:
+                sync.wait(1)
+                if uav.is_connected():
+                    break
+            self.m('...Found UAV')
+            time.sleep(1)
+
+
+        if not uav.get_position():
+            self.goto_state(STATE_WAIT_FOR_UAV_POSITION)
+            self.m('Waiting for UAV Position...')
+            while 1:
+                sync.wait(1)
+                if uav.get_position():
+                    break
+            self.m('...Found UAV Position')
+            time.sleep(1)
 
 
         loop_started = True
         while 1:
             sync.notify()
-
-
-            if not uav.is_connected():
-                self.goto_state(STATE_WAIT_FOR_UAV)
-                self.m('Waiting for UAV...')
-                while 1:
-                    sync.wait(1)
-                    if uav.is_connected():
-                        break
-                self.m('...Found UAV')
-
-
-            if not uav.get_position():
-                self.goto_state(STATE_WAIT_FOR_UAV_POSITION)
-                self.m('Waiting for UAV Position...')
-                while 1:
-                    sync.wait(1)
-                    if uav.get_position():
-                        break
-                self.m('...Found UAV Position')
 
 
             if loop_started:
@@ -218,7 +217,7 @@ class Board(SerialThread):
                 time.sleep(2)
                 self.lightsOff()
                 self.m('Now start flight preparations.')
-                time.sleep(2)
+                time.sleep(1)
 
 
             line = self.ser.readline()
@@ -231,8 +230,6 @@ class Board(SerialThread):
             except ValueError:
                 continue
             arm, right, abort = bool(arm), bool(right), bool(abort)
-
-
 
 
             if not unlock:
@@ -248,10 +245,7 @@ class Board(SerialThread):
                     self.light(LIGHT_TWO, LIGHT_ON)
                     continue
 
-                if uav.is_flying():
-                    self.m('Return to Land')
-                    uav.return_to_land()
-                else:
+                if uav.is_waiting():
                     self.m('Abort')
                     self.lightsOff(False)
                     self.light(LIGHT_FOUR, LIGHT_ON)
@@ -260,6 +254,15 @@ class Board(SerialThread):
                     time.sleep(5)
                     self.lightsOff()
                     return
+
+                elif uav.is_flying():
+                    self.m('Return to Land')
+                    uav.return_to_land()
+
+
+            if uav.is_flying() or uav.is_rtl():
+                self.m('Still in the air')
+                continue
 
 
 
@@ -358,6 +361,8 @@ class Board(SerialThread):
                             self.m('Failed to start motors.')
                     else:
                         self.m('Start motors.')
+
+
 
 
             if self.state == STATE_LAUNCH:

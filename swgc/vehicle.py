@@ -51,8 +51,8 @@ def get_distance_to_current_waypoint():
     pos1 = vehicle.location.global_frame
     pos2 = vehicle.commands[nextwaypoint - 1]
 
-    pos1 = geo.Position(pos1.lat, pos1.lat, pos1.alt)
-    pos2 = geo.Position(pos2.lat, pos2.lat, pos2.alt)
+    pos1 = geo.Position(pos1.lat, pos1.lon, pos1.alt)
+    pos2 = geo.Position(pos2.x,   pos2.y,   pos2.z)
 
     return pos1.get_distance(pos2)
 
@@ -264,6 +264,10 @@ def get_position():
         return None
     if vehicle.location is None:
         return None
+    if vehicle.location.global_frame.lat      is None or \
+            vehicle.location.global_frame.lon is None or \
+            vehicle.location.global_frame.lat is None:
+        return None
 
     return geo.Position.copy(
         vehicle.location.global_frame)
@@ -385,6 +389,22 @@ def is_flying():
     """Is the vehicle flying?
     """
     return get_mode() == 'MISSION'
+
+
+
+
+def is_rtl():
+    """Is the vehicle 'returning to land'?
+    """
+    return get_mode() == 'RTL'
+
+
+
+
+def is_waiting():
+    """Is the vehicle neither flying ot rtl?
+    """
+    return not is_flying() and not is_rtl()
 
 
 

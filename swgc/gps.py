@@ -97,7 +97,9 @@ class GPS(SerialThread):
         latitude, longitude, altitude.
         Updated ~ once per second.
         """
-        return self.position
+        if self.position:
+            return Position.copy(self.position)
+        return None
 
 
 
