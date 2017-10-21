@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SWGC UI.
-On notify rewrite display.
+"""The SWGC UI.
 """
 import time, threading, collections, traceback
 import pygame
@@ -8,7 +7,6 @@ import pygame
 from . import sync
 from . settings import FONTNAME, FONTSIZE, CLEAR_COLOR
 from . framebuffer import get as get_framebuffer
-
 
 
 class UI(threading.Thread):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""App settings.
+"""Settings.
 """
 
 ALTITUDE = 12

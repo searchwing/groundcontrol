@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Some geo stuff.
+"""A GEO Position class.
 """
 from LatLon import LatLon
 import geopy, geopy.distance
-
-
 
 
 class Position(object):

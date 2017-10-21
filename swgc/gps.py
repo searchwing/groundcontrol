@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Provide current local GPS position from a local serial GPS device.
+"""Provide the current local GPS position froma local
+serial NMEA GPS device.
 """
 import time, datetime
 
 from . import sync
 from . geo import Position
 from . serialthread import SerialThread
-
-
 
 
 class GPS(SerialThread):

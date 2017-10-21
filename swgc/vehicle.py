@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""pixracer/px4/dronekit abstraction.
+"""Another mavlink wrapper.
+Pixracer/PX4/Dronekit abstraction.
 """
 import time, socket, exceptions, traceback
 

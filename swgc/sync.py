@@ -4,7 +4,7 @@
 import threading
 
 
-# global confition
+# global condition
 _condition = threading.Condition()
 
 

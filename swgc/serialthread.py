@@ -4,8 +4,6 @@
 import time, threading, traceback, serial
 
 
-
-
 class SerialThread(threading.Thread):
     """Abstract superclass for threads working on serial devices.
     Subclasses have to implement work()
@@ -65,12 +63,7 @@ class SerialThread(threading.Thread):
                     self.log('Is open')
 
                 self.ser = ser
-
-                # work() is supposed to be blocking until its finished
-                # If it returns False the port will be closed and the serial thread finished.
-                # Else the port will be reopened and the loop continues.
-                if not self.work():
-                    self.stop()
+                self.work()
 
             except serial.SerialException, e:
                 self.log('Serial error', e)
@@ -88,8 +81,8 @@ class SerialThread(threading.Thread):
         """To be implemented by inheriting classes.
         Dont call, it will be called by this thread.
         Is is supposed to be blocking until its finished.
-        If it returns False the port will be closed and the serial thread finishes,
-        Else the port will be reopened and the loop continues.
+        If it returns the port will be reopened and the
+        loop continues.
         """
         raise Exception('Not implemented')
 

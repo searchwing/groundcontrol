@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Frame buffer stuff.
+"""Serve the frame buffer.
 """
 import os, atexit
 import pygame
 
 
+# Global, there can be only one framebuffer
 screen = None
 
 
@@ -17,6 +18,7 @@ def log(*args):
 
 def get():
     """Get pygame compatible framebuffer device.
+    Open it if not yet open.
     """
     global screen
     if screen:
@@ -54,6 +56,9 @@ def get():
 
 @atexit.register
 def close():
+    """Close the framebuffer if open.
+    Will be called anyway on exit.
+    """
     global screen
     if not screen:
         return

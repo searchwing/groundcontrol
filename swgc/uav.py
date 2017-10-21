@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """The UAV this app controls.
-Object wrapper for actual vehicle module.
+Object wrapper for the actual vehicle module.
 """
 import time, threading
 
