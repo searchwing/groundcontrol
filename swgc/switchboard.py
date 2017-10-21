@@ -4,8 +4,6 @@
 import time
 
 from . import sync, geo
-from . gps import gps
-from . uav import uav
 from . settings import ALTITUDE
 from . serialthread import SerialThread
 
@@ -54,8 +52,9 @@ class Board(SerialThread):
      control UI and UAV.
     """
 
-    def __init__(self, name, port, baud):
+    def __init__(self, name, port, baud, gps, uav):
         super(Board, self).__init__(name = name, port = port, baud = baud)
+        self.gps, self.uav = gps, uav
         self.state = STATE_NO_STATE
         self.msg, self.pos = None, None
         self.lightsList = [LIGHT_OFF, LIGHT_OFF, LIGHT_OFF, LIGHT_OFF,]
@@ -168,14 +167,14 @@ class Board(SerialThread):
         self.goto_state(STATE_NO_STATE)
 
 
-        self.pos = gps.get_position()
+        self.pos = self.gps.get_position()
         if not self.pos:
             self.goto_state(STATE_WAIT_FOR_POS)
             self.m('Waiting for local position...')
             self.lightsSignal()
             while 1:
                 sync.wait(1)
-                self.pos = gps.get_position()
+                self.pos = self.gps.get_position()
                 if self.pos:
                     break
             self.m('...Found local position')
@@ -183,23 +182,23 @@ class Board(SerialThread):
             time.sleep(1)
 
 
-        if not uav.is_connected():
+        if not self.uav.is_connected():
             self.goto_state(STATE_WAIT_FOR_UAV)
             self.m('Waiting for UAV...')
             while 1:
                 sync.wait(1)
-                if uav.is_connected():
+                if self.uav.is_connected():
                     break
             self.m('...Found UAV')
             time.sleep(1)
 
 
-        if not uav.get_position():
+        if not self.uav.get_position():
             self.goto_state(STATE_WAIT_FOR_UAV_POSITION)
             self.m('Waiting for UAV Position...')
             while 1:
                 sync.wait(1)
-                if uav.get_position():
+                if self.uav.get_position():
                     break
             self.m('...Found UAV Position')
             time.sleep(1)
@@ -245,22 +244,22 @@ class Board(SerialThread):
                     self.light(LIGHT_TWO, LIGHT_ON)
                     continue
 
-                if uav.is_waiting():
+                if self.uav.is_waiting():
                     self.m('Abort')
                     self.lightsOff(False)
                     self.light(LIGHT_FOUR, LIGHT_ON)
                     self.goto_state(STATE_NO_STATE)
-                    uav.reset()
+                    self.uav.reset()
                     time.sleep(5)
                     self.lightsOff()
                     return
 
-                elif uav.is_flying():
+                elif self.uav.is_flying():
                     self.m('Return to Land')
-                    uav.return_to_land()
+                    self.uav.return_to_land()
 
 
-            if uav.is_flying() or uav.is_rtl():
+            if self.uav.is_flying() or self.uav.is_rtl():
                 self.m('Still in the air')
                 continue
 
@@ -327,7 +326,7 @@ class Board(SerialThread):
                         time.sleep(1)
 
                         self.pos.alt = ALTITUDE
-                        if uav.set_target(self.pos):
+                        if self.uav.set_target(self.pos):
                             self.m('Target transmitted.')
                             self.lightsOff(False)
                             self.goto_state(STATE_START_MOTORS)
@@ -353,7 +352,7 @@ class Board(SerialThread):
                         self.m('Starting motors...')
                         time.sleep(1)
 
-                        if uav.arm():
+                        if self.uav.arm():
                             self.m('Motors running.')
                             self.lightsOff(False)
                             self.goto_state(STATE_LAUNCH)
@@ -379,7 +378,7 @@ class Board(SerialThread):
                         self.m('Launching...')
                         time.sleep(1)
 
-                        if uav.launch():
+                        if self.uav.launch():
                             self.m('Launched')
                             self.goto_state(STATE_FLYING)
                             return
@@ -389,23 +388,3 @@ class Board(SerialThread):
 
                     else:
                         self.m('Launch.')
-
-
-
-
-# a global singleton
-_board = None
-
-def start(port, baud):
-    """Instanciate and start a global singleton.
-    """
-    global _board
-    _board = Board(
-        name = 'Board', port = port, baud = baud)
-    _board.start()
-
-class _Board(object):
-    def __getattr__(self, attr):
-        return getattr(_board, attr)
-
-board = _Board()

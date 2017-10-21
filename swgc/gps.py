@@ -88,7 +88,7 @@ class GPS(SerialThread):
             pos = self.position
             if pos:
                 break
-            sync.wait()
+            sync.wait(1)
         return pos
 
 
@@ -97,26 +97,4 @@ class GPS(SerialThread):
         latitude, longitude, altitude.
         Updated ~ once per second.
         """
-        if self.position:
-            return Position.copy(self.position)
-        return None
-
-
-
-
-# a global singleton
-_gps = None
-
-def start(port, baud):
-    """Instanciate and start a global singleton.
-    """
-    global _gps
-    _gps = GPS(
-        name = 'GPS',
-        port = port, baud = baud)
-    _gps.start()
-
-class _GPS(object):
-    def __getattr__(self, attr):
-        return getattr(_gps, attr)
-gps = _GPS()
+        return Position.copy(self.position) if self.position else None

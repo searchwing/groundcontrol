@@ -1,32 +1,97 @@
 # -*- coding: utf-8 -*-
 """Async work on serial devices.
 """
-import time, threading, traceback
-import serial
-
-from . import sync
+import time, threading, traceback, serial
 
 
 
 
 class SerialThread(threading.Thread):
     """Abstract superclass for threads working on serial devices.
-    Notifies global app lock on successful connection.
-    Subclasses have to implement work(), it will be called after
-    successfull connecting the serial device, when work() returns
-    the serial device will be closed and reopened again.
+    Subclasses have to implement work()
     """
 
     def __init__(self, name, port, baud, timeout = 10):
         """Init.
         """
         super(SerialThread, self).__init__()
+        self.daemon = True
+
         self.name = name
         self.port, self.baud, self.timeout = port, baud, timeout
-        self.ser = None
-        self.closed = False
+        self.ser, self.running = None, False
 
-        self.daemon = True # Thread attribute
+
+    def start(self):
+        """Start.
+        """
+        self.log('Start')
+        self.running = True
+
+        super(SerialThread, self).start()
+
+
+    def close(self):
+        """Close serial connection if any.
+        """
+        self.log('Close')
+        self.running = False
+
+        ser, self.ser = self.ser, None
+        if not ser is None:
+            try:
+                ser.close()
+            except BaseException, e:
+                pass # We can't do anything here
+
+
+    def run(self):
+        """Internal. Don't call.
+        """
+        while self.running:
+            try:
+                # Connect
+                self.log('Open', self.port, self.baud)
+                ser = serial.Serial(
+                    port     = self.port,
+                    baudrate = self.baud,
+                    timeout  = self.timeout)
+
+                # Open
+                if ser.isOpen(): # Can it be open already? Lets test, better is better
+                    self.log('Already open')
+                else:
+                    ser.open()
+                    self.log('Is open')
+
+                self.ser = ser
+
+                # work() is supposed to be blocking until its finished
+                # If it returns False the port will be closed and the serial thread finished.
+                # Else the port will be reopened and the loop continues.
+                if not self.work():
+                    self.stop()
+
+            except serial.SerialException, e:
+                self.log('Serial error', e)
+
+            except BaseException, e:
+                self.log('Unkown error', e)
+                traceback.print_exc()
+
+            if self.running:
+                # Don't freak out, sleep a second
+                time.sleep(1)
+
+
+    def work(self):
+        """To be implemented by inheriting classes.
+        Dont call, it will be called by this thread.
+        Is is supposed to be blocking until its finished.
+        If it returns False the port will be closed and the serial thread finishes,
+        Else the port will be reopened and the loop continues.
+        """
+        raise Exception('Not implemented')
 
 
     def log(self, *msg):
@@ -36,79 +101,7 @@ class SerialThread(threading.Thread):
         print '%s: %s' % (self.name, msg,)
 
 
-    def run(self):
-        """Internal. Don't call.
+    def __str__(self):
+        """To string.
         """
-        while not self.closed:
-            connection_failed = True # Expecting the worst
-            try:
-                # Connect
-                self.log('Open', self.port, self.baud)
-                self.ser = serial.Serial(
-                    port     = self.port,
-                    baudrate = self.baud,
-                    timeout  = self.timeout)
-
-                # Open
-                if self.ser.isOpen(): # Can it be open already? Lets test, better is better
-                    self.log('Already open')
-                else:
-                    self.ser.open()
-                    self.log('Is open')
-
-                connection_failed = False # No exception, we have a connection
-
-                sync.notify() # Global notify
-
-                self.work() # Expected to be blocking, afer this the port will be closed again
-
-            except serial.SerialException, e:
-                self.log('Serial error', e)
-            except BaseException, e:
-                self.log('Unkown error', e)
-                traceback.print_exc()
-
-            if self.ser:
-                self.log('Close')
-                try:
-                    self.ser.close()
-                except BaseException, e:
-                    pass
-
-                self.ser = None
-                self.log('Is closed')
-
-            if connection_failed:
-                # Don't freak out, sleep a second
-                time.sleep(1)
-
-
-    def work(self):
-        """To be implemented by inheriting classes.
-        After return the serial device will be closed again.
-        Dont call, it will be called by this thread.
-        """
-        raise Exception('Not implemented')
-
-
-    def wait_for_serial_connection(self):
-        """Block until we have a serial connection.
-        """
-        while self.ser is None:
-            sync.wait()
-
-
-    def close_serial_connection(self):
-        """Close serial connectin if any.
-        """
-        self.log('Close forever')
-        self.closed = True
-
-        ser, self.ser = self.ser, None
-        if not ser is None:
-            try:
-                ser.close()
-            except BaseException, e:
-                self.log('Error on closing serial connection', e)
-
-        self.log('Closed forever')
+        return self.name

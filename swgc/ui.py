@@ -6,10 +6,6 @@ import time, threading, collections, traceback
 import pygame
 
 from . import sync
-from . gps import gps
-from . uav import uav
-from . settings import *
-from . switchboard import board
 from . framebuffer import get as get_framebuffer
 
 
@@ -17,8 +13,9 @@ from . framebuffer import get as get_framebuffer
 class UI(threading.Thread):
     """Thread controling the SWGC display.
     """
-    def __init__(self, *args, **kwargs):
-        super(UI, self).__init__(*args, **kwargs)
+    def __init__(self, gps, uav, board):
+        super(UI, self).__init__()
+        self.gps, self.uav, self.board = gps, uav, board
         self.daemon = True
 
     def run(self):
@@ -29,15 +26,6 @@ class UI(threading.Thread):
                 print e
                 traceback.print_exc()
                 time.sleep(5)
-
-ui = UI()
-
-def start():
-    """Start the UI.
-    """
-    ui.start()
-
-
 
 
 _screen, _font = None, None
@@ -55,16 +43,16 @@ def _run():
 
     while 1:
         texts = []
-        texts.append('%s UTC\n' % gps.dt if gps.dt else '......\n')
+        texts.append('%s UTC\n' % self.gps.dt if self.gps.dt else '......\n')
 
 
-        gpos = gps.get_position()
-        upos = uav.get_position()
-        bpos = board.get_position()
+        gpos = self.gps.get_position()
+        upos = self.uav.get_position()
+        bpos = self.board.get_position()
 
 
         if upos:
-            head = uav.get_heading()
+            head = self.uav.get_heading()
             head = '%7i\xb0' % head if not head is None else ''
 
             text = \
@@ -113,7 +101,7 @@ def _run():
         texts.append(text)
 
 
-        text = board.get_message()
+        text = self.board.get_message()
         if text:
             texts.append(text)
 

@@ -23,6 +23,8 @@ class UAV(threading.Thread):
 
 
     def close(self):
+        """Not blocking.
+        """
         self.running = False
 
 
@@ -37,9 +39,9 @@ class UAV(threading.Thread):
                     vehicle.connect(self.address)
 
                 if vehicle.is_flying() or vehicle.is_rtl():
+                    print
                     vehicle.log_state()
-
-                time.sleep(1)
+                    time.sleep(1)
 
             except BaseException, e:
                 print e

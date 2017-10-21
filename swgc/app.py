@@ -4,25 +4,38 @@ Call run() to get swgc running.
 """
 import sys, time, traceback
 
-from . uav import uav
-from . import gps, ui
-from . import switchboard as board
-from . settings import UAV_ADDRESS, GPS_PORT, GPS_BAUD, BOARD_PORT, BOARD_BAUD
+from . import gps, uav, switchboard, ui
 
 
 def run():
     """Call to get the app running.
     """
-    uav.start(UAV_ADDRESS)
+
+    uav = uav.UAV(UAV_ADDRESS)
+
+    gps = gps.GPS(
+            name = 'PGS',
+            port = GPS_PORT, baud = GPS_BAUD)
+
+    board = switchboard.Board(
+            name = 'Board',
+            port = BOARD_PORT, baud = BOARD_BAUD,
+            gps = gps)
+
+    ui = ui.UI(gps = gps, uav = uav)
+
+
+    uav.start()
     time.sleep(0.2)
 
-    gps.start(GPS_PORT, GPS_BAUD)
+    gps.start()
     time.sleep(0.2)
 
-    board.start(BOARD_PORT, BOARD_BAUD)
+    board.start()
     time.sleep(0.2)
 
     ui.start()
+
 
     try:
         while 1:
@@ -37,7 +50,7 @@ def run():
         traceback.print_exc()
 
     try:
-        uav.close()
+        uav.close() # Isn't blocking
     except Exception, e:
         print e
         traceback.print_exc()
