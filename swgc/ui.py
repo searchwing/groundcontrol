@@ -6,6 +6,7 @@ import time, threading, collections, traceback
 import pygame
 
 from . import sync
+from . settings import FONTNAME, FONTSIZE, CLEAR_COLOR
 from . framebuffer import get as get_framebuffer
 
 
@@ -21,7 +22,7 @@ class UI(threading.Thread):
     def run(self):
         while 1:
             try:
-                _run()
+                _run(self)
             except BaseException, e:
                 print e
                 traceback.print_exc()
@@ -31,7 +32,7 @@ class UI(threading.Thread):
 _screen, _font = None, None
 
 
-def _run():
+def _run(self):
     """Internal.
     The UI thread.
     """

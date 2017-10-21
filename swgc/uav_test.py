@@ -11,13 +11,18 @@ def run():
     """Call to test.
     """
     try:
-        if not vehicle.connect(UAV_ADDRESS): return
-        if not vehicle.wait_for_position():  return
+        if not vehicle.connect(UAV_ADDRESS):
+            return
+        if not vehicle.wait_for_position():
+            return
 
-        pos = vehicle.get_position().get_location_by_offset_meters_and_heading(10, 0)
-        if not vehicle.set_target(pos):      return
+        pos = vehicle.get_position()
+        pos = pos.get_location_by_offset_meters_and_heading(10, 0)
+        if not vehicle.set_target(pos):
+            return
 
-        if not vehicle.arm():                return
+        if not vehicle.arm():
+            return
         vehicle.launch()
 
         while 1:

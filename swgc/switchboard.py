@@ -3,7 +3,7 @@
 """
 import time
 
-from . import sync, geo
+from . import sync
 from . settings import ALTITUDE
 from . serialthread import SerialThread
 

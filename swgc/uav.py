@@ -11,14 +11,15 @@ class UAV(threading.Thread):
     """Singelton object for the vehicle module.
     Keeps connecting the vehicle, delegates all calls to it.
     """
-    def __init__(self):
+    def __init__(self, address):
         super(UAV, self).__init__()
         self.daemon = True
-        self.address, self.running, self.closed = None, False, True
+        self.address = address
+        self.running, self.closed = False, True
 
 
-    def start(self, address):
-        self.address, self.running, self.closed = address, True, False
+    def start(self):
+        self.running, self.closed = True, False
         super(UAV, self).start()
 
 
@@ -60,6 +61,3 @@ class UAV(threading.Thread):
         """Delegate all calls to the wrapped vehicle module.
         """
         return getattr(vehicle, name)
-
-
-uav = UAV()

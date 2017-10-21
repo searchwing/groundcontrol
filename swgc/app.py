@@ -4,25 +4,30 @@ Call run() to get swgc running.
 """
 import sys, time, traceback
 
-from . import gps, uav, switchboard, ui
+from . ui import UI
+from . uav import UAV
+from . gps import GPS
+from . switchboard import Board
+
+from . settings import UAV_ADDRESS, GPS_PORT, GPS_BAUD, BOARD_PORT, BOARD_BAUD
 
 
 def run():
     """Call to get the app running.
     """
 
-    uav = uav.UAV(UAV_ADDRESS)
+    uav = UAV(address = UAV_ADDRESS)
 
-    gps = gps.GPS(
-            name = 'PGS',
-            port = GPS_PORT, baud = GPS_BAUD)
+    gps = GPS(
+        name = 'GPS',
+        port = GPS_PORT, baud = GPS_BAUD)
 
-    board = switchboard.Board(
-            name = 'Board',
-            port = BOARD_PORT, baud = BOARD_BAUD,
-            gps = gps)
+    board = Board(
+        name = 'Board',
+        port = BOARD_PORT, baud = BOARD_BAUD,
+        gps = gps, uav = uav)
 
-    ui = ui.UI(gps = gps, uav = uav)
+    ui = UI(gps = gps, uav = uav, board = board)
 
 
     uav.start()

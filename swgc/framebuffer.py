@@ -64,6 +64,7 @@ def close():
         pygame.display.quit()
         pygame.quit()
     except Exception, e:
+        # We can't do anything about it, so catch it here
         log('Error on closing pygame', e)
 
 

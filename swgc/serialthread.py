@@ -41,7 +41,7 @@ class SerialThread(threading.Thread):
         if not ser is None:
             try:
                 ser.close()
-            except BaseException, e:
+            except BaseException:
                 pass # We can't do anything here
 
 
