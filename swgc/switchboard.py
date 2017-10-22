@@ -172,11 +172,7 @@ class Board(SerialThread):
             self.goto_state(STATE_WAIT_FOR_POS)
             self.m('Waiting for local position...')
             self.lightsSignal()
-            while 1:
-                sync.wait(1)
-                self.pos = self.gps.get_position()
-                if self.pos:
-                    break
+            self.gps.wait_for_position()
             self.m('...Found local position')
             self.lightsSignal()
             time.sleep(1)
@@ -185,10 +181,7 @@ class Board(SerialThread):
         if not self.uav.is_connected():
             self.goto_state(STATE_WAIT_FOR_UAV)
             self.m('Waiting for UAV...')
-            while 1:
-                sync.wait(1)
-                if self.uav.is_connected():
-                    break
+            self.uav.wait_for_connection()
             self.m('...Found UAV')
             time.sleep(1)
 
@@ -196,10 +189,7 @@ class Board(SerialThread):
         if not self.uav.get_position():
             self.goto_state(STATE_WAIT_FOR_UAV_POSITION)
             self.m('Waiting for UAV Position...')
-            while 1:
-                sync.wait(1)
-                if self.uav.get_position():
-                    break
+            self.uav.wait_for_position()
             self.m('...Found UAV Position')
             time.sleep(1)
 

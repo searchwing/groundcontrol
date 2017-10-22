@@ -39,7 +39,7 @@ class UAV(threading.Thread):
                 if not vehicle.is_connected():
                     vehicle.connect(self.address)
 
-                if vehicle.is_flying() or vehicle.is_rtl():
+                if vehicle.is_flying():
                     print
                     vehicle.log_state()
                     time.sleep(1)

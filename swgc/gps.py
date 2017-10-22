@@ -38,6 +38,7 @@ class GPS(SerialThread):
 
             elif sentence.startswith('$GPGGA'):
                 sentence = sentence.split(',')
+                # pylint: disable=unused-variable
                 (frmat,
                  utc,
                  latitude,
@@ -82,13 +83,8 @@ class GPS(SerialThread):
     def wait_for_position(self):
         """Block until a position is available.
         """
-        pos = None
-        while 1:
-            pos = self.position
-            if pos:
-                break
+        while self.position is None:
             sync.wait(1)
-        return pos
 
 
     def get_position(self):

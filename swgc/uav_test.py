@@ -18,7 +18,7 @@ def run():
 
         pos = vehicle.get_position()
         pos = pos.get_location_by_offset_meters_and_heading(10, 0)
-        if not vehicle.set_target(pos):
+        if not vehicle.set_mission(pos):
             return
 
         if not vehicle.arm():
