@@ -15,6 +15,9 @@ if __name__ == '__main__':
         activate_this = '%s/bin/activate_this.py' % VENV_DIR
         execfile(activate_this, dict(__file__ = activate_this))
 
+    import sys
+    connection_string = sys.argv[1] if len(sys.argv) > 1 else None
+
     # Run the uav test.
     from swgc import uav_test
-    uav_test.run()
+    uav_test.run(connection_string = connection_string)

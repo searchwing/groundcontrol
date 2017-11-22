@@ -96,6 +96,9 @@ def px4_set_mode(mavMode):
     global vehicle, home
 
     log('Vehicle px4 set mode', mavMode)
+    if mavMode is None:
+        log('  Missing argument')
+        return False
     if vehicle is None:
         log('No vehicle to set px4 mode')
         return False
@@ -123,6 +126,9 @@ def connect(connection_string):
     global vehicle, home
 
     log('Vehicle connect')
+    if connection_string is None:
+        log('  Missing argument')
+        return False
     if vehicle:
         log('Already connected a vehicle')
         return True
@@ -234,7 +240,7 @@ def wait_for_position():
 
     try:
         count = 0
-        while not vehicle.gps_0.fix_type > 2:
+        while not vehicle.home_location:#vehicle.gps_0.fix_type > 2:
             log('(%i) ' % count, 'sats:', vehicle.gps_0.satellites_visible,
                 'fix:', vehicle.gps_0.fix_type,
                 'position:',
@@ -388,6 +394,9 @@ def set_mode(mode):
     global vehicle, home
 
     log('Vehicle setting mode', mode)
+    if mode is None:
+        log('  Missing argument')
+        return False
     if vehicle is None:
         log('No vehicle for setting mode')
         return False
@@ -429,6 +438,67 @@ def is_flying():
 
 
 
+def set_roi(pos):
+    """Set 'region if interest'.
+    Return True on success.
+    """
+    global vehicle, home
+
+    log('Vehicle set ROI')
+    if pos is None:
+        log('  Missing argument')
+        return False
+    if not vehicle:
+        log('No vehicle to setROI')
+        return False
+
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,
+        mavutil.mavlink.MAV_CMD_DO_SET_ROI,
+        0,
+        0, 0, 0, 0,
+        pos.lat,
+        pos.lon,
+        pos.alt
+    )
+    vehicle.send_mavlink(msg)
+
+    return True
+
+
+
+
+def loiter(seconds, pos = None):
+    """Loiter for passed seconds at passed position
+    or if None at current position.
+    Return True on success.
+    """
+    global vehicle, home
+
+    log('Vehice loiter')
+    if seconds is None:
+        log('  Missing argument')
+        return False
+    if not vehicle:
+        log('No vehicle to loiter')
+        return False
+
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,
+        mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
+        0,
+        seconds, 0, 0, 0,
+        pos.lat,
+        pos.lon,
+        pos.alt
+    )
+    vehicle.send_mavlink(msg)
+
+    return True
+
+
+
+
 def set_mission(pos):
     """Build and upload mission.
     Return True on success.
@@ -436,6 +506,9 @@ def set_mission(pos):
     global vehicle, home
 
     log('Vehicle set mission')
+    if pos is None:
+        log('  Missing argument')
+        return False
     if vehicle is None:
         log('No vehicle to set mission')
         return False
@@ -478,6 +551,16 @@ def set_mission(pos):
                       mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
                       0, 1,
                       0, 0, 0, 0,
+                      start.lat, start.lon, alt)
+        cmds.add(cmd)
+        seq += 1
+
+        # Loiter
+        cmd = Command(0, 0, seq,
+                      mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_LOITER_TIME,
+                      0, 1,
+                      20, 0, 0, 0,
                       start.lat, start.lon, alt)
         cmds.add(cmd)
         seq += 1

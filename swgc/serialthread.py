@@ -57,10 +57,12 @@ class SerialThread(threading.Thread):
 
                 # Open
                 if ser.isOpen(): # Can it be open already? Lets test, better is better
-                    self.log('Already open')
+                    #self.log('Already open')
+                    pass
                 else:
                     ser.open()
-                    self.log('Is open')
+                    #self.log('Is open')
+                self.log('Opened', self.port, self.baud)
 
                 self.ser = ser
                 self.work()

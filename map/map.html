@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta content="utf-8" http-equiv="encoding">
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+
+        <script src="/static/jquery.js"></script>
+        <script src="/static/ol.js"></script>
+        <script src="/static/olms.js"></script>
+
+        <link rel="stylesheet" href="/static/ol.css" type="text/css">
+
+        <title>Vector Tiles</title>
+        <style>
+body{
+    margin:0px;
+    padding:0px;
+}
+#map:fullscreen {
+    height:100%%;
+}
+#map:-ms-fullscreen {
+    height:100%%;
+}
+#map:-moz-full-screen {
+    height:100%%;
+}
+#map:-webkit-full-screen {
+    height:100%%;
+}
+#map{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background-color:white;
+}
+#perm{
+    width:26px;
+    height:26px;
+    position:absolute;
+    top:50px;
+    right:10px;
+    z-index:10;
+    background-color:rgba(0,60,136,.5);
+    background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AcFBjYE1ZK03gAAAUlJREFUOMuVk71KA1EQhc/NaiP+gCRpFHwGBSFlCrFVfAsbwSJCBMv06QIGJOBziI3EYAgkjU8gIloIAasIn4WzMqx34zrN7J6de+6ZmbNSgQDSfADcATPgHbgCyvonSYv8KEzWdofegH3gwmG9Ikq67sAESFzNueHThTyiEIKAmr2OJCUhhO30Aou+5aUQU2Ik65K2JC1KegohPGfUBkmvksqShnntHEcGOs60NXHfjmKz6czZTsNqbhzW+muwY2ATWAWawCOwBgxcTfvnvCPxKx4Cy5bPgBWgauRpdL2ImNlGhp3MabETm8mh94nDk4yCNE5/KTGg7xxbyhYAG0AN2AEqURIDZ0a0Fxn+LXAPXDpzRqMk6cOedz1ubdYl1b6NHgZRJe72nuu/CdSBl+yKi/zZlTnbaeXOJIesClwDU+ATeEhtX5TkCwAWUyAsHH1QAAAAAElFTkSuQmCC);
+    background-position:center;
+    background-repeat:no-repeat;
+    cursor:pointer;
+}
+#info{
+    width:100px;
+    height:100px;
+    position:absolute;
+    bottom:20px;
+    left:20px;
+    z-index:10;
+    background-color:blue;
+}
+        </style>
+    </head>
+    <body>
+        <div id="map">
+            <div id="info"></div>
+            <div id="perm"></div>
+        </div>
+
+        <script>
+// We work with EPSG:4326, ol3 prefers EPSG:3857
+// So we have to convert coordinates sometimes:
+// ol.proj.transform([lat,lon], "<source coordinate system name>", "<target coordinate system name>")
+
+$(function(){
+
+    // Feature for drawing a track
+    var trackFeature = new ol.Feature({
+        geometry: new ol.geom.LineString([]),
+    });
+
+    // Create the map
+    var map = (function(){
+
+        // Default center/zoom
+        var center = [13.40, 52.52];
+        var zoom = 10;
+
+        // Center/zoom from url hash
+        if (window.location.hash !== "") {
+            var hash = window.location.hash.replace("#map=", "");
+            var parts = hash.split("/");
+            if (parts.length == 3){
+                center = [
+                    parseFloat(parts[0]),
+                    parseFloat(parts[1])
+                ];
+                zoom = parseInt(parts[2], 10);
+            }
+        }
+
+        // The vector tile layer
+        var tileLayer = new ol.layer.VectorTile({
+            source: new ol.source.VectorTile({
+                attributions : null, // I know, i know ...
+                format       : new ol.format.MVT(), // pbf vector tiles
+                url          : "static/tiles/{z}/{x}/{y}.pbf",
+                maxZoom      : 14, // highest tile level is 14, to zoom past this overzoom
+            }),
+            declutter : true,
+        });
+
+        // The actual map object
+        var map = new ol.Map({
+            target: "map", // div with id "map"
+
+            view: new ol.View({
+                center  : ol.proj.transform(center, "EPSG:4326", "EPSG:3857"),
+                zoom    : zoom,
+                minZoom :  1,
+                maxZoom : 20, // if this is higher then available tile levels then overzoom
+            }),
+
+            // OL3 Buildin controls
+            controls: ol.control.defaults().extend([
+                new ol.control.FullScreen(),
+            ]),
+
+            layers: [
+                // The tracking layer
+                new ol.layer.Vector({
+                    source : new ol.source.Vector({
+                        features : [trackFeature,]
+                    }),
+                    style  : new ol.style.Style({
+                        stroke : new ol.style.Stroke({
+                            color   : "rgba(0,0,255,1.0)",
+                            width   : 1,
+                            lineCap : "round",
+                        }),
+                    }),
+                }),
+            ],
+        });
+
+        // Fetch style in json and apply
+        fetch('/static/style_osm-bright.json').then(function(response) {
+            response.json().then(function(glStyle){
+                olms.applyBackground(map, glStyle);
+                olms.applyStyle(tileLayer, glStyle, 'openmaptiles').then(function() {
+                    map.addLayer(tileLayer);
+                });
+            });
+        });
+
+        return map;
+    })();
+
+    // Custom permalink control
+    var perm = window.location.hash;
+    $("#perm").click(function(){window.location.hash = perm;});
+
+    // Add a hook to update a permalink href
+    (function(){
+        function updatePermalink(){
+            var view = map.getView();
+            var center = view.getCenter();
+            center = ol.proj.transform(center, "EPSG:3857", "EPSG:4326");
+            var zoom = Math.round(view.getZoom() * 1000) / 1000;
+            var hash = "#map=" +
+                Math.round(center[0]      * 1000) / 1000  + "/" +
+                Math.round(center[1]      * 1000) / 1000  + "/" +
+                Math.round(view.getZoom() * 1000) / 1000;
+            //if(hash != window.location.hash){
+            //    var state = {
+            //        zoom   : view.getZoom(),
+            //        center : view.getCenter(),
+            //    };
+            //    window.history.pushState(state, "map", hash);
+            //}
+            perm = hash; //
+        }
+        var initial = true; //
+        map.on("movestart", function(){ //
+            if(initial) initial = false; else window.location.hash = ""; }); //
+        map.on("moveend", updatePermalink);
+    })();
+});
+        </script>
+    </body>
+</html>

@@ -1,0 +1,3 @@
+./mb-util --image_format=pbf <mbtiles_file> countries
+gzip -d -r -S .pbf *
+find . -type f -exec mv '{}' '{}'.pbf \;
