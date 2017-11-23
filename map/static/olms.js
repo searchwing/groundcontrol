@@ -3513,7 +3513,7 @@ function multiSelect(arr, left, right, n, compare) {
     });
   };function ta(a, b) {
     a ? this.c = a : this.c = ua;this.a = [];this.f = [];this.g = b || "";
-  }var ua = "https://fonts.googleapis.com/css";function va(a, b) {
+  }var ua = "/static/osm-bright/fonts.css";function va(a, b) {
     for (var c = b.length, d = 0; d < c; d++) {
       var e = b[d].split(":");3 == e.length && a.f.push(e.pop());var f = "";2 == e.length && "" != e[1] && (f = ":");a.a.push(e.join(f));
     }

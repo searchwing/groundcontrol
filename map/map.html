@@ -140,11 +140,14 @@ $(function(){
             ],
         });
 
+
+        var style_url = "/static/osm-bright/style.json";
+
         // Fetch style in json and apply
-        fetch('/static/style_osm-bright.json').then(function(response) {
+        fetch(style_url).then(function(response) {
             response.json().then(function(glStyle){
                 olms.applyBackground(map, glStyle);
-                olms.applyStyle(tileLayer, glStyle, 'openmaptiles').then(function() {
+                olms.applyStyle(tileLayer, glStyle, "openmaptiles").then(function() {
                     map.addLayer(tileLayer);
                 });
             });
