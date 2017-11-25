@@ -51,7 +51,7 @@
       "url": "https://free.tilehosting.com/data/v3.json?key=RiS4gsgZPZqeeMlIyxFo"
     }
   },
-  "sprite": "static/osm-bright/sprite",
+  "sprite": "/static/ol3/osm-bright/sprite",
   "glyphs": "https://free.tilehosting.com/fonts/{fontstack}/{range}.pbf?key=RiS4gsgZPZqeeMlIyxFo",
   "layers": [
     {

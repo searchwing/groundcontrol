@@ -4,11 +4,11 @@
         <meta content="utf-8" http-equiv="encoding">
         <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 
-        <script src="/static/jquery.js"></script>
-        <script src="/static/ol.js"></script>
-        <script src="/static/olms.js"></script>
+        <script src="/static/ol3/jquery.js"></script>
+        <script src="/static/ol3/ol.js"></script>
+        <script src="/static/ol3/olms.js"></script>
 
-        <link rel="stylesheet" href="/static/ol.css" type="text/css">
+        <link rel="stylesheet" href="/static/ol3/ol.css" type="text/css">
 
         <title>pbf vector map</title>
         <style>
@@ -142,7 +142,7 @@ $(function(){
         });
 
 
-        var style_url = "/static/osm-bright/style.json";
+        var style_url = "/static/ol3/osm-bright/style.json";
 
         // Fetch style in json and apply
         fetch(style_url).then(function(response) {
