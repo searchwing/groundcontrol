@@ -10,7 +10,7 @@
 
         <link rel="stylesheet" href="/static/ol.css" type="text/css">
 
-        <title>Vector Tiles</title>
+        <title>pbf vector map</title>
         <style>
 body{
     margin:0px;
@@ -35,11 +35,12 @@ body{
     background-color:white;
 }
 #perm{
-    width:26px;
-    height:26px;
+    width:25px;
+    height:25px;
+    border-radius:2px;
     position:absolute;
-    top:50px;
-    right:10px;
+    top:37px;
+    right:11px;
     z-index:10;
     background-color:rgba(0,60,136,.5);
     background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AcFBjYE1ZK03gAAAUlJREFUOMuVk71KA1EQhc/NaiP+gCRpFHwGBSFlCrFVfAsbwSJCBMv06QIGJOBziI3EYAgkjU8gIloIAasIn4WzMqx34zrN7J6de+6ZmbNSgQDSfADcATPgHbgCyvonSYv8KEzWdofegH3gwmG9Ikq67sAESFzNueHThTyiEIKAmr2OJCUhhO30Aou+5aUQU2Ik65K2JC1KegohPGfUBkmvksqShnntHEcGOs60NXHfjmKz6czZTsNqbhzW+muwY2ATWAWawCOwBgxcTfvnvCPxKx4Cy5bPgBWgauRpdL2ImNlGhp3MabETm8mh94nDk4yCNE5/KTGg7xxbyhYAG0AN2AEqURIDZ0a0Fxn+LXAPXDpzRqMk6cOedz1ubdYl1b6NHgZRJe72nuu/CdSBl+yKi/zZlTnbaeXOJIesClwDU+ATeEhtX5TkCwAWUyAsHH1QAAAAAElFTkSuQmCC);
@@ -147,11 +148,22 @@ $(function(){
         fetch(style_url).then(function(response) {
             response.json().then(function(glStyle){
                 olms.applyBackground(map, glStyle);
-                olms.applyStyle(tileLayer, glStyle, "openmaptiles").then(function() {
+                olms.applyStyle(tileLayer, glStyle, "openmaptiles").then(function(){
                     map.addLayer(tileLayer);
                 });
             });
         });
+
+        // when the user moves the mouse, get the name property
+        // from each feature under the mouse and display it
+        //function onMouseMove(browserEvent) {
+        //    var coordinate = browserEvent.coordinate;
+        //    var pixel = map.getPixelFromCoordinate(coordinate);
+        //    map.forEachFeatureAtPixel(pixel, function(feature){
+        //        console.log(feature.get('name'));
+        //    });
+        //}
+        //map.on('pointermove', onMouseMove);
 
         return map;
     })();
@@ -171,18 +183,12 @@ $(function(){
                 Math.round(center[0]      * 1000) / 1000  + "/" +
                 Math.round(center[1]      * 1000) / 1000  + "/" +
                 Math.round(view.getZoom() * 1000) / 1000;
-            //if(hash != window.location.hash){
-            //    var state = {
-            //        zoom   : view.getZoom(),
-            //        center : view.getCenter(),
-            //    };
-            //    window.history.pushState(state, "map", hash);
-            //}
-            perm = hash; //
+            perm = hash;
+            // If there is an hash already we should update it
+            if(window.location.hash){
+                window.location.hash = hash;
+            }
         }
-        var initial = true; //
-        map.on("movestart", function(){ //
-            if(initial) initial = false; else window.location.hash = ""; }); //
         map.on("moveend", updatePermalink);
     })();
 });
