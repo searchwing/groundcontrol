@@ -22,9 +22,10 @@ if __name__ == '__main__':
     from swgc import gps
 
 
+_template = 'map_ol3.html'
 
 
-_html = open('map.html').read()
+_html = open(_template).read()
 
 _gps = None
 
@@ -38,7 +39,7 @@ class Server(object):
             lat, lon = pos.lat, pos.lon
         else:
             lat, lon = 0, 0
-        _html = open('map.html').read()
+        _html = open(_template).read()
         return _html #% (lon, lat)
 
 
