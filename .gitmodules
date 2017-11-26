@@ -1,3 +1,0 @@
-[submodule "map/static/openstreetmap-mapboxgl"]
-	path = map/static/openstreetmap-mapboxgl
-	url = https://github.com/stirringhalo/openstreetmap-mapboxgl.git
