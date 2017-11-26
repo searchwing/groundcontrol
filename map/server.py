@@ -22,7 +22,8 @@ if __name__ == '__main__':
     from swgc import gps
 
 
-_template = 'map_ol3.html'
+#_template = 'map_ol3.html'
+_template = 'map_mapbox.html'
 
 
 _html = open(_template).read()
