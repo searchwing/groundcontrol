@@ -52,7 +52,7 @@
       "maxzoom": 14
     }
   },
-  "sprite": "http://127.0.0.1:8080/static/openstreetmap-mapboxgl/sprites/sprites",
+  "sprite": "http://127.0.0.1:8080/static/mapbox-0.42.2/osm-bright/sprite",
   "glyphs": "http://127.0.0.1:8080/static/openstreetmap-mapboxgl/glyphs/{fontstack}/{range}.pbf",
   "layers": [
     {
