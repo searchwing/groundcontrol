@@ -9,8 +9,9 @@ class Position(object):
     """Lat/Lon/Alt position and functions.
     """
 
-    def __init__(self, lat, lon, alt):
+    def __init__(self, lat, lon, alt, head = None):
         self.lat, self.lon, self.alt = lat, lon, alt
+        self.head = head
 
 
     def __str__(self):
@@ -28,7 +29,7 @@ class Position(object):
         """Get Position object from passed object that
         has to have attributes lat, lon, alt.
         """
-        return Position(pos.lat, pos.lon, pos.alt) if pos else None
+        return Position(pos.lat, pos.lon, pos.alt, pos.head) if pos else None
 
 
     def get_distance(self, pos):
