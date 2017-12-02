@@ -43,26 +43,16 @@ class Server(object):
         _html = open(_template).read()
         return _html #% (lon, lat)
 
-
-    @cherrypy.expose
-    def li(self):
-        pos = _gps.get_position()
-        if pos:
-            lat, lon = pos.lat, pos.lon
-        else:
-            lat, lon = 0, 0
-        _html = open('map_li.html').read()
-        return _html #% (lon, lat)
-
     
     @cherrypy.expose
+    @cherrypy.tools.json_out()
     def pos(self):
         pos = _gps.get_position()
         if pos:
             lat, lon = pos.lat, pos.lon
         else:
             lat, lon = 0, 0
-        return  '{"lat":%s, "lon":%s}' % (lat, lon)
+        return {'geometry': {'type': 'Point', 'coordinates': [lon, lat,]}, 'type': 'Feature',}# 'properties': {},}
 
 
 def main():
@@ -77,18 +67,25 @@ def main():
             'server.socket_port' : 8080,
             'server.thread_pool' : 8,
             'tools.staticdir.content_types' : {
-                'pbf' : 'application/binary',
-                'js'  : 'application/javascript',
-                'css' : 'text/css',
-            }
+                'css'  : 'text/css',
+                'js'   : 'application/javascript',
+                'json' : 'application/json',
+                'pbf'  : 'application/binary',
+             },
         },
         '/static' : {
             'tools.staticdir.on'  : True,
             'tools.staticdir.dir' : os.path.join(PATH, 'static'),
+            'tools.gzip.on'      : True,
+            'tools.expires.on'   : True,
+            'tools.expires.secs' : 86400,
         },
         '/tiles' : {
             'tools.staticdir.on'  : True,
-            'tools.staticdir.dir' : os.path.join(PATH, 'tiles'),
+            'tools.staticdir.dir' : os.path.join(PATH, 'static', 'tiles'),
+            'tools.gzip.on'      : True,
+            'tools.expires.on'   : True,
+            'tools.expires.secs' : 86400,
         }
     }
     cherrypy.quickstart(Server(), config = config)
