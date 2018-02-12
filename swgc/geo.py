@@ -9,19 +9,20 @@ class Position(object):
     """Lat/Lon/Alt position and functions.
     """
 
-    def __init__(self, lat, lon, alt, head = None):
+    def __init__(self, lat, lon, alt):
         self.lat, self.lon, self.alt = lat, lon, alt
-        self.head = head
 
 
     def __str__(self):
         """To string.
         """
-        return '%3.5f %3.5f %4i' % (self.lat, self.lon, self.alt)
+        return '%3.5f %3.5f %4i' % (
+            self.lat, self.lon, self.alt)
 
 
     def __unicode__(self):
-        return u'%3.5f %3.5f %4i' % (self.lat, self.lon, self.alt)
+        return u'%3.5f %3.5f %4i' % (
+            self.lat, self.lon, self.alt)
 
 
     @staticmethod
@@ -29,7 +30,8 @@ class Position(object):
         """Get Position object from passed object that
         has to have attributes lat, lon, alt.
         """
-        return Position(pos.lat, pos.lon, pos.alt, pos.head) if pos else None
+        return Position(
+            pos.lat, pos.lon, pos.alt) if pos else None
 
 
     def get_distance(self, pos):
@@ -43,23 +45,27 @@ class Position(object):
 
 
     def get_distance_and_heading(self, pos):
-        """Get distance meters and heading degrees to passed position.
+        """Get distance meters and heading degrees
+        to passed position.
         """
         p1 = LatLon(self.lat, self.lon)
         p2 = LatLon(pos.lat, pos.lon)
-        dist = p1.distance(p2) # km
-        dist *= 1000 # m
-        head = p1.heading_initial(p2) # degree
-        if head < 0:
-            head += 360
-        return dist, head
+        distance = p1.distance(p2) # km
+        distance *= 1000 # m
+        heading = p1.heading_initial(p2) # degree
+        if heading < 0:
+            heading += 360
+        return distance, heading
 
 
     def get_location_by_offset_meters_and_heading(self, distance, heading):
-        """Get Position in passed distance meters and heading degrees.
+        """Get Position in passed distance meters
+        and heading degrees.
         """
-        dist = geopy.distance.distance(meters = distance)
-        dest = dist.destination(
+        distance = geopy.distance.distance(meters = distance)
+        destination = distance.destination(
             geopy.Point(self.lat, self.lon), heading)
         return Position(
-            lat = dest.latitude, lon = dest.longitude, alt = self.alt)
+            lat = destination.latitude,
+            lon = destination.longitude,
+            alt = self.alt)
