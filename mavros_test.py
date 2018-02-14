@@ -1,39 +1,44 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import String
-from mavros_msgs.srv import *
 from sensor_msgs.msg import NavSatFix
 from mavros_msgs.msg import GlobalPositionTarget
+from mavros_msgs.srv import SetMode, CommandBool, CommandTOL
 
-NAME = 'groundcontrol'
 
+LOG_NAME  = 'groundcontrol_log'
+NODE_NAME = 'groundcontrol_node'
+
+TOPIC_NAME_STATE         = '/mavros/state'
+TOPIC_NAME_GLOBALPOSITON = '/mavros/global_position/raw/fix'
 
 MODE_GUIDED     = 'GUIDED'
 MODE_STABILIZED = 'STABILIZED'
 
 
-logpublisher = rospy.Publisher(NAME, String, queue_size = 10)
+#logpublisher = rospy.Publisher(LOG_NAME, String, queue_size = 10)
 
 
-setmodeService = rospy.ServiceProxy('/mavros/set_mode',    mavros_msgs.srv.SetMode)
-armingService  = rospy.ServiceProxy('/mavros/cmd/arming',  mavros_msgs.srv.CommandBool)
-takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', mavros_msgs.srv.CommandTOL)
-landService    = rospy.ServiceProxy('/mavros/cmd/land',    mavros_msgs.srv.CommandTOL)
+positionPublisher  = rospy.Publisher(
+        '/mavros_plane/setpoint_raw/global',
+        GlobalPositionTarget, queue_size = 10)
+
+setmodeService = rospy.ServiceProxy('/mavros/set_mode',    SetMode)
+armingService  = rospy.ServiceProxy('/mavros/cmd/arming',  CommandBool)
+takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', CommandTOL)
+landService    = rospy.ServiceProxy('/mavros/cmd/land',    CommandTOL)
 
 
-fix       = None
-latitude  = 0.0
-longitude = 0.0
+fix = None
 
 
 def Info(*args):
-    """Logging.
+    """Info logging.
+    Internal wrapper for rospy.loginfo.
     """
     rospy.loginfo(*args)
-    message = args[0] % args[1:] if len(args) > 1 else args[0]
-    logpublisher.publish(message)
-
-
+    #message = args[0] % args[1:] if len(args) > 1 else args[0]
+    #logpublisher.publish(message)
 
 
 def setMode(mode):
@@ -135,24 +140,21 @@ def setPosition(fix):
 
 
 def globalPositionCallback(globalPosition):
-    """Callback for 'global position.
+    """Callback for global position.
     Register with
-    rospy.Subscriber('/mavros_groundstation/global_position/raw/fix',
+    rospy.Subscriber(TOPIC_NAME_GLOBALPOSITON,
             NavSatFix, globalPositionCallback)
     """
-    global latitude, longitude, fix
-
-    fix       = globalPosition
-    latitude  = globalPosition.latitude
-    longitude = globalPosition.longitude
-
-    Info('longitude: %.7f', longitude)
-    Info('latitude:  %.7f', latitude)
+    global fix
+    fix = globalPosition
 
 
 
 
 def menu():
+    """Commandline text menu.
+    """
+    print
     print 'Press'
     print '1: to set mode to GUIDED'
     print '2: to set mode to STABILIZED'
@@ -163,21 +165,24 @@ def menu():
     print '7: print GPS coordinates'
     print '8: testing'
     print 'Or enter a string for a mode to set,'
-    print 'Or just hit ENTER to exit.'
+    print 'Or just hit ENTER to quit.'
     print
+    choice = raw_input('Enter your input: ');
+    print
+    return choice
 
 
 def main():
-    global fix, latitude, longitude
+    """Main loop.
+    """
+    # Needed for logpublisher, for logging we must be a node
+    #rospy.init_node(NODE_NAME, anonymous = True)
 
-    rospy.init_node(NAME, anonymous = True)
-    rospy.Subscriber('/mavros_groundstation/global_position/raw/fix',
+    rospy.Subscriber(TOPIC_NAME_GLOBALPOSITON,
             NavSatFix, globalPositionCallback)
 
     while not rospy.is_shutdown():
-        menu()
-        x = raw_input('Enter your input: ');
-        print
+        x = menu()
 
         if not x:
             print 'Bye'
@@ -199,22 +204,21 @@ def main():
             land()
 
         elif x == '7':
-            print ('longitude: %.7f' % longitude)
-            print ('latitude:  %.7f' % latitude)
+            if fix:
+                print 'longitude: %.7f' % fix.longitude, \
+                      'latitude:  %.7f' % fix.latitude
+            else:
+                print 'No position available'
 
         elif x == '8':
-            pub = rospy.Publisher('/mavros_plane/setpoint_raw/global',
-                    GlobalPositionTarget, queue_size = 10)
             rate = rospy.Rate(10)
             while not rospy.is_shutdown():
                 pos = setPosition(fix)
-                pub.publish(pos)
+                positionPublisher.publish(pos)
                 rate.sleep()
 
         else:
             setMode(x)
-
-        print
 
 
 
