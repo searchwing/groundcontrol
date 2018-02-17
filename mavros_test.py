@@ -63,11 +63,11 @@ def Info(*args):
 def stateToSring(state):
     """Return a string for passed mavros state.
     """
-    if not state:
-        return None
-    return "system_status:%s mode:'%s' connected:%s armed:%s guided:%s" % (
-        state.system_status, state.mode,
-        state.connected, state.armed, state.guided)
+    if state:
+        return "system_status:%s connected:%s armed:%s guided:%s mode:'%s'" % (
+            state.system_status, state.connected,
+            state.armed, state.guided, state.mode)
+    return None
 
 
 
@@ -112,12 +112,14 @@ def waitForMode(mode, timeout = None):
     """Wait for passed mode.
     """
     Info("Wait for mode '%s', timeout %s", mode, timeout)
+
     def testfunc():
         if not _state:
             return False
         return _state.mode == mode
     ret = waitFor(testfunc, timeout) 
-    Info("Wait for mode '%s', timeout %s returns %s", mode, timeout, ret)
+
+    Info("Wait for mode '%s' timeout %s returns %s", mode, timeout, ret)
     return ret
 
 
@@ -127,31 +129,38 @@ def waitForArmed(armed, timeout = None):
     """Wait for passed armed/disarmed.
     """
     Info('Wait for armed %s, timeout %s' , armed, timeout)
+
     def testfunc():
         if not _state:
             return False
         return _state.armed == armed
     ret = waitFor(testfunc, timeout) 
-    Info("Wait for armed %s, timeout %s returns %s", armed, timeout, ret)
+
+    Info("Wait for armed %s timeout %s returns %s", armed, timeout, ret)
     return ret
 
 
 
 
-def setStateCallback(state):
+def stateCallback(state):
     """Callback for state changes.
     Notifies waiting threats.
     """
     global _state
+
     changed = not _state                                or not \
             _state.system_status == state.system_status or not \
             _state.mode          == state.mode          or not \
             _state.connected     == state.connected     or not \
             _state.armed         == state.armed         or not \
             _state.guided        == state.guided
+
+    if changed:
+        Info('State changed\n  from %s\n  to   %s',
+            stateToSring(_state), stateToSring(state))
+
     _state = state
     if changed:
-        Info('State changed: %s', stateToSring(state))
         notify()
 
 
@@ -162,6 +171,7 @@ def globalPositionCallback(fix):
     Notifies waiting threats.
     """
     global _fix
+
     if not _fix:
         changed = True
     else:
@@ -175,8 +185,9 @@ def globalPositionCallback(fix):
                   not lon1 == lon2 #or \
                   #not alt1 == alt2
     _fix = fix
+
     if changed:
-        Info('Position changed: latitude:%s longitude:%s altitude:%s',
+        Info('Position changed\n  to  latitude:%s longitude:%s altitude:%s',
                 _fix.latitude, _fix.longitude, _fix.altitude)
         notify()
 
@@ -189,6 +200,7 @@ def shutdownHook():
     """
     global _running
     Info('Shutdown %s', NAME)
+
     _running = False
     notify()
 
@@ -221,9 +233,11 @@ def setMode(mode):
         rospy.wait_for_service('/mavros/set_mode',
                 timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = setmodeService(custom_mode = mode)
+
     except rospy.ROSException, err:
         Info("Set mode to '%s' call failed with error '%s'", mode, err)
         return None
+
     ret = ret.mode_sent
     Info("Set mode to '%s' returns %s", mode, ret)
     return ret
@@ -240,10 +254,12 @@ def arm(arm):
         rospy.wait_for_service('/mavros/cmd/arming',
                 timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = armingService(arm)
+
     except rospy.ROSException, err:
         Info("%s call failed with error '%s'",
                 ('Arm' if arm else 'Disarm'), err)
         return None
+
     ret = ret.success
     Info('%s returns %s', ('Arm' if arm else 'Disarm'), ret)
     return ret
@@ -251,7 +267,7 @@ def arm(arm):
 
 
 
-def takeoff():
+def takeoff(altitude):
     """Takeoff.
     Return True/False for Success, Failure.
     Return None for rospy.ROSException
@@ -260,11 +276,14 @@ def takeoff():
         rospy.wait_for_service('/mavros/cmd/takeoff',
                 timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = takeoffService(
-                latitude = 0, longitude = 0, altitude = 2,
+                latitude = _fix.latitude, longitude = _fix.longitude,
+                altitude = altitude,
                 min_pitch = 0, yaw = 0)
+
     except rospy.ROSException, err:
         Info("Takeoff call failed with error '%s'", err)
         return None
+
     ret = ret.success
     Info('Takeoff returns %s', ret)
     return ret
@@ -283,9 +302,11 @@ def land():
         ret = landService(
             altitude = 0, latitude = 0, longitude = 0,
             min_pitch = 0, yaw = 0)
+
     except rospy.ROSException, err:
         Info("Land call failed with error '%s'", err)
         return None
+
     ret = ret.success
     Info('Land returns %s', ret)
     return ret
@@ -336,7 +357,7 @@ def main():
     # Needed for logpublisher, for logging we must be a node
     print('Init node %s' % NODE_NAME) # Regular loggin g not yet available
     # No timeout for this?
-    rospy.init_node(NODE_NAME, anonymous = False)
+    rospy.init_node(NODE_NAME, anonymous = False, log_level = rospy.DEBUG)
     Info('Node %s initialized', NODE_NAME)
 
     # Register shutdown hook
@@ -345,7 +366,7 @@ def main():
 
     # Register state callback
     rospy.Subscriber(TOPIC_NAME_STATE, State,
-            callback = setStateCallback)
+            callback = stateCallback)
 
     # Register position callback
     rospy.Subscriber(TOPIC_NAME_GLOBALPOSITON, NavSatFix,
@@ -377,7 +398,7 @@ def main():
                 waitForArmed(False, 5)
 
         elif choice == '5':
-            takeoff()
+            takeoff(5)
 
         elif choice == '6':
             land()
@@ -402,7 +423,7 @@ def main():
 
         elif choice:
             if setMode(choice):
-                waitForMode(choice, 5)
+                waitForMode(choice)#, 5)
 
 
 
