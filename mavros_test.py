@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import time, threading
-import rospy
+import mavros, rospy
 from std_msgs.msg import String
-from mavros_msgs.msg import State
 from sensor_msgs.msg import NavSatFix
-from mavros_msgs.msg import GlobalPositionTarget
-from mavros_msgs.srv import SetMode, CommandBool, CommandTOL, WaypointPush
+from mavros_msgs.msg import State, GlobalPositionTarget, Waypoint, WaypointList
+from mavros_msgs.srv import SetMode, CommandBool, CommandTOL, WaypointPush, WaypointClear
 
 
 NAME      = 'pilot'
@@ -14,6 +13,7 @@ NODE_NAME = '%s_node' % NAME
 
 TOPIC_NAME_STATE         = '/mavros/state'
 TOPIC_NAME_GLOBALPOSITON = '/mavros/global_position/raw/fix'
+TOPIC_NAME_WAYPOINTS     = '/mavros/mission/waypoints'
 
 # timeout for rospy.wait_for_service, must be None or > 0
 WAIT_FOR_SERVICE_TIMEOUT = 1
@@ -31,20 +31,22 @@ positionPublisher = rospy.Publisher(
         '/mavros_plane/setpoint_raw/global',
         GlobalPositionTarget, queue_size = 10)
 
-setmodeService = rospy.ServiceProxy('/mavros/set_mode',    SetMode)
-armingService  = rospy.ServiceProxy('/mavros/cmd/arming',  CommandBool)
-takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', CommandTOL)
-landService    = rospy.ServiceProxy('/mavros/cmd/land',    CommandTOL)
-wpPushService  = rospy.ServiceProxy('mavros/mission/push', WaypointPush)
+setmodeService      = rospy.ServiceProxy('/mavros/set_mode',     SetMode)
+armingService       = rospy.ServiceProxy('/mavros/cmd/arming',   CommandBool)
+takeoffService      = rospy.ServiceProxy('/mavros/cmd/takeoff',  CommandTOL)
+landService         = rospy.ServiceProxy('/mavros/cmd/land',     CommandTOL)
+missionClearService = rospy.ServiceProxy('mavros/mission/clear', WaypointClear)
+wpPushService       = rospy.ServiceProxy('mavros/mission/push',  WaypointPush)
 
 
 # For asynchronus notifications
 _condition = threading.Condition()
 
 
-_running = True
-_fix     = None
-_state   = None
+_running   = True
+_fix       = None
+_state     = None
+_waypoints = None
 
 
 
@@ -119,7 +121,7 @@ def waitForMode(mode, timeout = None):
         return _state.mode == mode
     ret = waitFor(testfunc, timeout) 
 
-    Info("Wait for mode '%s' timeout %s returns %s", mode, timeout, ret)
+    Info("Wait for mode '%s' timeout %s returned %s", mode, timeout, ret)
     return ret
 
 
@@ -136,7 +138,7 @@ def waitForArmed(armed, timeout = None):
         return _state.armed == armed
     ret = waitFor(testfunc, timeout) 
 
-    Info("Wait for armed %s timeout %s returns %s", armed, timeout, ret)
+    Info("Wait for armed %s timeout %s returned %s", armed, timeout, ret)
     return ret
 
 
@@ -194,6 +196,20 @@ def globalPositionCallback(fix):
 
 
 
+def waypointListCallback(waypoints):
+    """Callback for set waypoints.
+    Notifies waiting threats.
+    """
+    global _waypoints
+
+    Info('Waypoints now current_seq:%s, %s',
+            waypoints.current_seq, waypoints.waypoints)
+    _waypoints = waypoints
+    notify()
+
+
+
+
 def shutdownHook():
     """Shut down callback.
     Notifies waiting threats.
@@ -230,8 +246,7 @@ def setMode(mode):
     Return None for rospy.ROSException
     """
     try:
-        rospy.wait_for_service('/mavros/set_mode',
-                timeout = WAIT_FOR_SERVICE_TIMEOUT)
+        setmodeService.wait_for_service(timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = setmodeService(custom_mode = mode)
 
     except rospy.ROSException, err:
@@ -239,7 +254,7 @@ def setMode(mode):
         return None
 
     ret = ret.mode_sent
-    Info("Set mode to '%s' returns %s", mode, ret)
+    Info("Set mode to '%s' call returned %s", mode, ret)
     return ret
 
 
@@ -251,8 +266,7 @@ def arm(arm):
     Return None for rospy.ROSException
     """
     try:
-        rospy.wait_for_service('/mavros/cmd/arming',
-                timeout = WAIT_FOR_SERVICE_TIMEOUT)
+        armingService.wait_for_service(timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = armingService(arm)
 
     except rospy.ROSException, err:
@@ -261,7 +275,7 @@ def arm(arm):
         return None
 
     ret = ret.success
-    Info('%s returns %s', ('Arm' if arm else 'Disarm'), ret)
+    Info('%s call returned %s', ('Arm' if arm else 'Disarm'), ret)
     return ret
 
 
@@ -273,11 +287,10 @@ def takeoff(altitude):
     Return None for rospy.ROSException
     """
     try:
-        rospy.wait_for_service('/mavros/cmd/takeoff',
-                timeout = WAIT_FOR_SERVICE_TIMEOUT)
+        takeoffService.wait_for_service(timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = takeoffService(
                 latitude = _fix.latitude, longitude = _fix.longitude,
-                altitude = altitude,
+                altitude = _fix.altitude + altitude,
                 min_pitch = 0, yaw = 0)
 
     except rospy.ROSException, err:
@@ -285,7 +298,7 @@ def takeoff(altitude):
         return None
 
     ret = ret.success
-    Info('Takeoff returns %s', ret)
+    Info('Takeoff call returned %s', ret)
     return ret
 
 
@@ -297,8 +310,7 @@ def land():
     Return None for rospy.ROSException
     """
     try:
-        rospy.wait_for_service('/mavros/cmd/land',
-                timeout = WAIT_FOR_SERVICE_TIMEOUT)
+        landService.wait_for_service(timeout = WAIT_FOR_SERVICE_TIMEOUT)
         ret = landService(
             altitude = 0, latitude = 0, longitude = 0,
             min_pitch = 0, yaw = 0)
@@ -308,7 +320,73 @@ def land():
         return None
 
     ret = ret.success
-    Info('Land returns %s', ret)
+    Info('Land call returned %s', ret)
+    return ret
+
+
+
+
+def setMission(positions):
+
+    wl = WaypointList()
+
+    pos = positions[0]
+
+    wp = Waypoint()
+    wp.frame        = 3
+    wp.command      = 22  # takeoff
+    wp.is_current   = True
+    wp.autocontinue = True
+    wp.param1       = pos.alt
+    wp.param2       = 0
+    wp.param3       = 0
+    wp.param4       = 0
+    wp.x_lat        = pos.lat
+    wp.y_long       = pos.lon
+    wp.z_alt        = pos.alt
+    wl.waypoints.append(wp)
+
+    for pos in positions[1:]:
+        wp = Waypoint()
+        wp.frame        = 3
+        wp.command      = 16  # simple point
+        wp.is_current   = False
+        wp.autocontinue = True
+        wp.param1       = 0  # takeoff altitude
+        wp.param2       = 0
+        wp.param3       = 0
+        wp.param4       = 0
+        wp.x_lat        = pos.lat
+        wp.y_long       = pos.lon
+        wp.z_alt        = pos.alt
+        wl.waypoints.append(wp)
+
+    try:
+        wpPushService.wait_for_service(timeout = WAIT_FOR_SERVICE_TIMEOUT)
+        ret = wpPushService(wl.waypoints)
+
+    except rospy.ROSException, err:
+        Info("Waypoint push call failed with error '%s'", err)
+        return None
+
+    ret = ret.mode_sent
+    Info('Waypoint push call returned %s', ret)
+    return ret
+
+
+
+
+def clearMission():
+    """Clear current mission.
+    """
+    try:
+        ret = missionClearService.call()
+    except rospy.RosException, err:
+        Info("Clear mission call failed with error '%s'", err)
+        return None
+
+    ret = ret.success
+    Info('Clear mission call returned %s', ret)
     return ret
 
 
@@ -334,15 +412,14 @@ def menu():
     """
     print
     print 'Press'
-    print '1: to set mode to GUIDED'
-    print '2: to set mode to STABILIZED'
-    print '3: to set mode to ARM'
-    print '4: to set mode to DISARM'
-    print '5: to set mode to TAKEOFF'
-    print '6: to set mode to LAND'
-    print '7: to print position'
-    print '8: to print state'
-    print '9: to test'
+    print 'g: to set mode to GUIDED'
+    print 's: to set mode to STABILIZED'
+    print 'a: to arm'
+    print 'd: to disarm'
+    print 't: to takeoff'
+    print 'l: to land'
+    print 'c: to clear mission'
+    print 'p: to print state and position'
     print 'q: to exit'
     print 'or enter a string for a mode to set'
     print
@@ -354,6 +431,8 @@ def menu():
 def main():
     """Main loop.
     """
+    mavros.set_namespace()
+
     # Needed for logpublisher, for logging we must be a node
     print('Init node %s' % NODE_NAME) # Regular loggin g not yet available
     # No timeout for this?
@@ -372,6 +451,11 @@ def main():
     rospy.Subscriber(TOPIC_NAME_GLOBALPOSITON, NavSatFix,
             callback = globalPositionCallback)
 
+    # Register waypoint callback
+    rospy.Subscriber(TOPIC_NAME_WAYPOINTS,
+            WaypointList, callback = waypointListCallback)
+
+
     Info('Running %s, going into main loop', NAME)
     # A custom main loop, alternatively to rospy.spin()
     while not rospy.is_shutdown():
@@ -381,29 +465,33 @@ def main():
             print 'Bye!'
             break
 
-        if   choice == '1':
+        if   choice == 'g':
             if setMode(MODE_GUIDED):
                 waitForMode(MODE_GUIDED, 5)
 
-        elif choice == '2':
+        elif choice == 's':
             if setMode(MODE_STABILIZED):
                 waitForMode(MODE_STABILIZED, 5)
 
-        elif choice == '3':
+        elif choice == 'a':
             if arm(True):
                 waitForArmed(True, 5)
 
-        elif choice == '4':
+        elif choice == 'd':
             if arm(False):
                 waitForArmed(False, 5)
 
-        elif choice == '5':
+        elif choice == 't':
             takeoff(5)
 
-        elif choice == '6':
+        elif choice == 'l':
             land()
 
-        elif choice == '7':
+        elif choice == 'c':
+            clearMission()
+
+        elif choice == 'p':
+            print stateToSring(_state)
             if _fix:
                 print 'longitude: %f' % _fix.longitude, \
                       'latitude:  %f' % _fix.latitude, \
@@ -411,10 +499,7 @@ def main():
             else:
                 print 'No position available'
 
-        elif choice == '8':
-            Info(stateToSring(_state))
-
-        elif choice == '9':
+        elif choice == 'x':
             rate = rospy.Rate(10)
             while not rospy.is_shutdown():
                 pos = setPosition(_fix)
