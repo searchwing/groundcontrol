@@ -5,7 +5,7 @@ Test the swgc.uav module.
 """
 
 
-VENV_DIR = None#'/Users/sascha/venv/'
+VENV_DIR = '/Users/sascha/venv/'
 
 
 if __name__ == '__main__':
