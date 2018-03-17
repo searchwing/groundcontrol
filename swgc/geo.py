@@ -16,12 +16,12 @@ class Position(object):
     def __str__(self):
         """To string.
         """
-        return '%3.5f %3.5f %4i' % (
+        return '%3.5f %3.5f %s' % (
             self.lat, self.lon, self.alt)
 
 
     def __unicode__(self):
-        return u'%3.5f %3.5f %4i' % (
+        return u'%3.5f %3.5f %s' % (
             self.lat, self.lon, self.alt)
 
 
