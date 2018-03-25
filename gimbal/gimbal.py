@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
-# Joystick to gimbal: the joystick
+# Joystick to gimbal: the gimbal
 import sys, time
-import serial
 from math import sqrt
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+
+import serial
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 import commands as cm
 
 
-DEBUG = False
-
 ADDRESS, PORT = '0.0.0.0', 8000
 
-httpd, gimbal = None, None
+gimbal = None
 
 
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        ret = 200 if handle_cmd(self.path) else 400
+        #ret = 200 if handle_cmd(self.path) else 400
+        ret = 200
         self.send_response(ret)
 
 
@@ -36,14 +37,19 @@ def handle(msg):
         if not m:
             return False
         cmd, args = m[0], m[1:]
-        if not args:
+        if not cmd or not args:
             return False
-        if not move_cmd(cmd, args):
+        if not cmd_gimbal(cmd, args):
             return False
     return True
 
 
+
+
 def cmd_gimbal(cmd, args):
+    global gimbal
+    ret = True
+
     if cmd == 'dir':
         args = [int(arg, 16) for arg in args]
         YSH, YSL, PSH, PSL = args
@@ -52,8 +58,20 @@ def cmd_gimbal(cmd, args):
             yawmode=cm.mode_speed,
             PSH=PSH, PSL=PSL,
             YSH=YSH, YSL=YSL))
-        return True
-    return False
+
+    elif cmd == 'zoomin':
+        gimbal.command(cm.zoom_in)
+
+    elif cmd == 'zoomout':
+        gimbal.command(cm.zoom_out)
+
+    elif cmd == 'zoomstop':
+        gimbal.command(cm.zoom_stop)
+
+    else:
+        ret = False
+
+    return ret
 
 
 
@@ -161,11 +179,11 @@ class Gimbal():
 
 def main():
     global gimbal, httpd
-    print('Starting gimbal')
 
-#    gimbal = Gimbal()
-#    gimbal.connect()
-#    gimbal.command(cm.home)
+    print('Init gimbal')
+    gimbal = Gimbal()
+    gimbal.connect()
+    #gimbal.command(cm.home)
 
     print('Starting httpd')
     httpd = HTTPServer((ADDRESS, PORT), Handler)
@@ -175,11 +193,17 @@ def main():
 
 
 if __name__ == '__main__':
+    print('I am the gimbal')
     while 1:
         try:
-            main()
+            if main():
+                break
         except KeyboardInterrupt, err:
-            print 'Interrupt, Exit 0'
+            print('Interrupted by ctrl-c, Exit 0')
             break
         except Exception, err:
-            print err
+            print('Some error: %s' % err)
+            print('Napping for 2 seconds, then trying again...')
+            time.sleep(2)
+            print('Trying again')
+    print('Bye')

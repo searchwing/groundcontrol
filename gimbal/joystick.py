@@ -6,8 +6,9 @@ import pygame, requests
 
 DEBUG = True
 
-ADDRESS, PORT = '0.0.0.0', 8000
-GIMBAL_URL = 'http://%s:%s' % (ADDRESS, PORT)
+
+GIMBAL_ADDRESS, GIMBAL_PORT = '192.168.0.', 8000
+GIMBAL_URL = 'http://%s:%s' % (GIMBAL_ADDRESS, GIMBAL_PORT)
 
 YAW_AXIS   = 0
 PITCH_AXIS = 1
@@ -16,26 +17,32 @@ THRESHOLD  = 0.1
 SLEEP      = 0.01
 
 
+
+
 def call_gimbal(msg):
     if DEBUG:
-        print msg
-    requests.get('%s%s' % (GIMBAL_URL, msg))
+        print(msg)
+    try:
+        requests.get('%s%s' % (GIMBAL_URL, msg))
+    except Exception as err:
+        #print('Failed to call gimbal: %s' % err)
+        pass
+
+
 
 
 def main():
-    print 'Starting'
-    print
+    print('Starting\n')
 
     pygame.init()
      
     if not pygame.joystick.get_count():
-        print 'No joystick found'
-        return
+        print('No joystick found')
+        return False
 
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
-    print 'Found a joystick (Using the first connected)'
-    print
+    print('Found a joystick (Using the first connected)')
 
     mode = 'mode_day'
     
@@ -43,7 +50,7 @@ def main():
         time.sleep(SLEEP)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-	        break
+                break
 
             msg = ''
 
@@ -122,16 +129,23 @@ def main():
 
     msg = 'cmd_stop'
     call_gimbal(msg)
+    return True
+
+
 
 
 if __name__ == '__main__':
+    print('I am the joystick')
     while 1:
         try:
-            main()
-        except KeyboardInterrupt, err:
-            print 'Interrupt, Exit 0'
+            if main():
+                break
+        except KeyboardInterrupt as err:
+            print('Interrupted by ctrl-c, Exit 0')
             break
-        except Exception, err:
-            print err
-            print 'Napping for 2 seconds'
+        except Exception as err:
+            print('Some error: %s' % err)
+            print('Napping for 2 seconds, then trying again...')
             time.sleep(2)
+            print('Trying again')
+    print('Bye')
